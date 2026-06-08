@@ -196,6 +196,8 @@ st.markdown(
 .event-card.ready {background:#e7f8df; border:2px solid #86c96f;}
 .event-card.soon {background:#fffbeb; border:2px solid #fbbf24;}
 .event-card.future {background:#f8fafc; border:1px solid #cbd5e1;}
+.event-card.overdue {background:#fee2e2; border:2px solid #ef4444;}
+.event-card.available {background:#e7f8df; border:2px solid #86c96f;}
 .event-row {display:flex; gap:9px; align-items:flex-start;}
 .event-icon {font-size:20px; width:26px; text-align:center;}
 .event-crop {font-weight:950; color:#0f172a; font-size:13px;}
@@ -204,6 +206,7 @@ st.markdown(
 .ready-text {color:#15803d;}
 .soon-text {color:#b45309;}
 .future-text {color:#2563eb;}
+.overdue-text {color:#b91c1c; font-weight:950;}
 .wip-card {
     background: rgba(255,255,255,0.95);
     border: 2px solid rgba(255,255,255,0.85);
@@ -216,6 +219,34 @@ st.markdown(
 .wip-title {font-size:24px; font-weight:950; color:#0f3d25; margin-bottom:8px;}
 .wip-text {font-size:15px; color:#475569; font-weight:700;}
 .no-events {color:#94a3b8; font-size:12px; font-weight:800; text-align:center; margin-top:12px;}
+/* Quitar barra/línea larga debajo de las pestañas */
+[data-baseweb="tab-list"] {border-bottom: none !important; box-shadow:none !important; gap: 22px !important;}
+[data-baseweb="tab-border"] {display:none !important;}
+[data-baseweb="tab-highlight"] {background-color:#ffffff !important; height:3px !important;}
+[data-baseweb="tab"] {color:#ffffff !important; font-weight:900 !important;}
+[data-baseweb="tab"][aria-selected="true"] {color:#ffffff !important;}
+.tree-card {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid rgba(255,255,255,0.88);
+    border-radius: 18px;
+    padding: 14px 14px;
+    min-height: 154px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+    margin-bottom: 14px;
+}
+.tree-row {display:flex; gap:14px; align-items:center;}
+.tree-icon {font-size:48px; width:66px; height:66px; border-radius:50%; background:#dcfce7; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.tree-name {font-size:18px; color:#0f172a; font-weight:950; margin-bottom:8px;}
+.tree-line {font-size:13px; color:#334155; font-weight:750; margin-top:4px;}
+.tree-pill {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:950; margin-left:5px;}
+.phen-vegetativo {background:#dcfce7; color:#166534;}
+.phen-floracion {background:#fce7f3; color:#9d174d;}
+.phen-fructificacion {background:#fef3c7; color:#92400e;}
+.phen-llenado {background:#dbeafe; color:#1d4ed8;}
+.phen-recuperacion {background:#ede9fe; color:#5b21b6;}
+.health-bueno {background:#dcfce7; color:#166534;}
+.health-atencion {background:#fef3c7; color:#92400e;}
+.health-estres {background:#fee2e2; color:#991b1b;}
 </style>
 """,
     unsafe_allow_html=True,
@@ -457,9 +488,13 @@ def month_week_numbers(year, month):
 def event_status(row):
     if pd.isna(row["Cosecha_Min"]):
         return "Sin fecha", "future"
-    days = (pd.to_datetime(row["Cosecha_Min"]).date() - date.today()).days
-    if days < 0:
-        return "Cosecha disponible", "ready"
+    min_date = pd.to_datetime(row["Cosecha_Min"]).date()
+    max_date = pd.to_datetime(row["Cosecha_Max"]).date() if pd.notna(row["Cosecha_Max"]) else None
+    days = (min_date - date.today()).days
+    if max_date is not None and max_date < date.today():
+        return "Cosecha máxima vencida", "overdue"
+    if days <= 0:
+        return "Cosecha disponible", "available"
     if days <= 15:
         return "Próxima cosecha", "soon"
     return "Cosecha futura", "future"
@@ -469,7 +504,7 @@ def calendar_event_card(row):
     crop = row["Cultivo"]
     meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
     status_label, status_class = event_status(row)
-    date_class = "ready-text" if status_class == "ready" else "soon-text" if status_class == "soon" else "future-text"
+    date_class = "overdue-text" if status_class == "overdue" else "ready-text" if status_class == "available" else "soon-text" if status_class == "soon" else "future-text"
     st.markdown(
         f"""
         <div class="event-card {status_class}">
@@ -505,7 +540,6 @@ def render_calendar_view(all_df):
     labels = [x[0] for x in month_options]
     default_label = f"{MONTHS_ES[today.month]} {today.year}"
 
-    st.markdown('<div class="calendar-filter-panel">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns([1.15, 1.15, 1.35, 1.25])
     with c1:
         selected_label = st.selectbox("Mes", labels, index=labels.index(default_label) if default_label in labels else 0, key="cal_mes")
@@ -534,7 +568,6 @@ def render_calendar_view(all_df):
 
     with c4:
         only_soon = st.checkbox("Solo próximos 15 días", value=False, key="cal_only_soon")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     calendar_df = calendar_base.copy()
     month_mask = calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)
@@ -542,9 +575,8 @@ def render_calendar_view(all_df):
         soon_mask = (calendar_df["Cosecha_Date"] >= today) & (calendar_df["Cosecha_Date"] <= today + pd.Timedelta(days=15))
         calendar_df = calendar_df[month_mask & soon_mask]
     else:
-        # Valor por defecto: cosechas disponibles del mes seleccionado, usando Cosecha_Min.
-        ready_mask = calendar_df["Cosecha_Date"] < today
-        calendar_df = calendar_df[month_mask & ready_mask]
+        # Default: todos los cultivos activos ubicados por Cosecha_Min en el mes seleccionado.
+        calendar_df = calendar_df[month_mask]
 
     if not calendar_df.empty:
         calendar_df["Week_Num"] = calendar_df["Cosecha_Date"].apply(app_week_number)
@@ -556,7 +588,7 @@ def render_calendar_view(all_df):
         crop = row["Cultivo"]
         meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
         status_label, status_class = event_status(row)
-        date_class = "ready-text" if status_class == "ready" else "soon-text" if status_class == "soon" else "future-text"
+        date_class = "overdue-text" if status_class == "overdue" else "ready-text" if status_class == "available" else "soon-text" if status_class == "soon" else "future-text"
         return f"""
         <div class="event-card {status_class}">
             <div class="event-row">
@@ -592,8 +624,82 @@ def render_calendar_view(all_df):
                 )
 
     if len(week_nums) == 0:
-        msg = "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados." if only_soon else "No hay cosechas disponibles para los filtros seleccionados."
+        msg = "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados." if only_soon else "No hay cultivos con cosecha mínima en el mes seleccionado."
         st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>', unsafe_allow_html=True)
+
+
+TREE_DATA = [
+    {"Finca":"Moravia", "Arbol":"Manzano tico", "Icono":"🍎", "Estado_Fenologico":"Llenado", "Trasplante":"N/A", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Moravia", "Arbol":"Guayabita del Perú", "Icono":"🌳", "Estado_Fenologico":"Vegetativo", "Trasplante":"N/A", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Guayaba", "Icono":"🌳", "Estado_Fenologico":"Floración", "Trasplante":"N/A", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Guanábana", "Icono":"🌳", "Estado_Fenologico":"Fructificación", "Trasplante":"N/A", "Estado_Sanitario":"Atención"},
+    {"Finca":"Frailes", "Arbol":"Naranja Washington", "Icono":"🍊", "Estado_Fenologico":"Vegetativo", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Naranja Valencia", "Icono":"🍊", "Estado_Fenologico":"Vegetativo", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Limón mandarina", "Icono":"🍋", "Estado_Fenologico":"Vegetativo", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Limón mesino", "Icono":"🍋", "Estado_Fenologico":"Vegetativo", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Limón dulce", "Icono":"🍋", "Estado_Fenologico":"Vegetativo", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Mandarina", "Icono":"🍊", "Estado_Fenologico":"Brotes", "Trasplante":"Jul 2025", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Anona", "Icono":"🌳", "Estado_Fenologico":"Recuperación", "Trasplante":"N/A", "Estado_Sanitario":"Estrés"},
+    {"Finca":"Frailes", "Arbol":"Níspero", "Icono":"🌳", "Estado_Fenologico":"Establecimiento", "Trasplante":"Reciente", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Durazno", "Icono":"🌸", "Estado_Fenologico":"Vegetativo", "Trasplante":"N/A", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Mango peludo", "Icono":"🥭", "Estado_Fenologico":"Vegetativo", "Trasplante":"N/A", "Estado_Sanitario":"Bueno"},
+    {"Finca":"Frailes", "Arbol":"Mamón chino", "Icono":"🌳", "Estado_Fenologico":"Recuperación", "Trasplante":"N/A", "Estado_Sanitario":"Atención"},
+]
+
+def phen_class(value):
+    v = str(value).lower()
+    if "flora" in v:
+        return "phen-floracion"
+    if "fruct" in v:
+        return "phen-fructificacion"
+    if "llen" in v:
+        return "phen-llenado"
+    if "recup" in v or "estable" in v or "brote" in v:
+        return "phen-recuperacion"
+    return "phen-vegetativo"
+
+def health_class(value):
+    v = str(value).lower()
+    if "estr" in v:
+        return "health-estres"
+    if "aten" in v:
+        return "health-atencion"
+    return "health-bueno"
+
+def render_tree_card(row):
+    st.markdown(f"""
+    <div class="tree-card">
+        <div class="tree-row">
+            <div class="tree-icon">{row['Icono']}</div>
+            <div style="width:100%;">
+                <div class="tree-name">{row['Arbol']}</div>
+                <div class="tree-line">Estado fenológico <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{row['Estado_Fenologico']}</span></div>
+                <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
+                <div class="tree-line">Estado sanitario <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {row['Estado_Sanitario']}</span></div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_arboles_view():
+    trees = pd.DataFrame(TREE_DATA)
+    c1, c2 = st.columns([1,1])
+    with c1:
+        finca_sel = st.selectbox("Finca", ["Todas"] + [f for f in ["Moravia","Frailes"] if f in trees["Finca"].unique()], key="tree_finca")
+    with c2:
+        health_sel = st.selectbox("Estado sanitario", ["Todos"] + sorted(trees["Estado_Sanitario"].unique()), key="tree_health")
+    if finca_sel != "Todas":
+        trees = trees[trees["Finca"] == finca_sel]
+    if health_sel != "Todos":
+        trees = trees[trees["Estado_Sanitario"] == health_sel]
+    for finca, group in trees.groupby("Finca", sort=False):
+        st.markdown(f'<div class="section-title">📍 {finca}</div>', unsafe_allow_html=True)
+        records = list(group.iterrows())
+        for start in range(0, len(records), 4):
+            cols = st.columns(4)
+            for col, (_, row) in zip(cols, records[start:start+4]):
+                with col:
+                    render_tree_card(row)
 
 df, units = load_data()
 
@@ -605,7 +711,7 @@ with st.sidebar:
     finca_options = [f for f in ["Moravia", "Frailes"] if f in set(units["Finca"].dropna().unique())] + [f for f in sorted(units["Finca"].dropna().unique()) if f not in ["Moravia", "Frailes"]]
     finca_filter = st.multiselect("Finca", finca_options, default=finca_options)
     unidad_options = sorted(units[units["Finca"].isin(finca_filter)]["Unidad"].dropna().unique()) if finca_filter else sorted(units["Unidad"].dropna().unique())
-    unidad_filter = st.multiselect("Unidad", unidad_options)
+    unidad_filter = st.multiselect("Cama", unidad_options)
     cultivo_filter = st.multiselect("Cultivo", sorted(df["Cultivo"].dropna().unique()))
     estado_filter = st.multiselect("Estado visual", sorted(set(list(df["Visual_Status"].dropna().unique()) + ["No activa"])))
     show_detail_table = st.checkbox("Mostrar tabla detalle", value=False)
@@ -663,15 +769,7 @@ with tab_camas:
                     bed_panel(unit_row, crops)
 
 with tab_arboles:
-    st.markdown(
-        """
-        <div class="wip-card">
-            <div class="wip-title">🌳 Árboles</div>
-            <div class="wip-text">Trabajo en progreso. Esta vista se usará para consolidado por árbol, etapa actual y próximas acciones.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    render_arboles_view()
 
 with tab_calendario:
     render_calendar_view(df)
