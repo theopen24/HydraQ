@@ -282,8 +282,6 @@ def is_available_placeholder(row):
 
 
 def is_harvest_ready(row):
-    control_html = control_status_html(latest_control_status(events, row.get("Siembra_ID")))
-
     if is_available_placeholder(row):
         return False
     today = date.today()
@@ -297,8 +295,6 @@ def is_harvest_ready(row):
 def visual_status(row):
     if str(row.get("Estado_Unidad", "")).lower().startswith("no activa"):
         return "No activa"
-    control_html = control_status_html(latest_control_status(events, row.get("Siembra_ID")))
-
     if is_available_placeholder(row):
         return "Disponible"
     if pd.isna(row["Fecha_Base"]) or "falta" in str(row["Alerta_Datos"]).lower() or "incompleta" in str(row["Alerta_Datos"]).lower():
