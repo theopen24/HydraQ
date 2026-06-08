@@ -8,16 +8,22 @@ st.set_page_config(page_title="Hydra Q FincaOS MVP", layout="wide", page_icon="�
 FILE_PATH = Path(__file__).parent / "Hydra_Q_FincaOS_V6_MVP_DEV_LookerReady.xlsx"
 
 CROP_ICONS = {
-    "Cebollino": "🌿",
-    "Tomate cherry": "🍅",
     "Tomate normal": "🍅",
+    "Tomate cherry": "🍅",
     "Lechuga": "🥬",
-    "Apio": "🥬",
-    "Espinaca": "🌱",
-    "Zanahoria": "🥕",
     "Pepino": "🥒",
+    "Zanahoria": "🥕",
+    "Cebollino": "🌱",
+    "Apio": "🥬",
+    "Espinaca": "🍃",
     "Vainica": "🫛",
-    "Cebolla": "🧅",
+    "Cebolla blanca": "🧅",
+    "Cebolla morada": "🧅",
+    "Acelga": "🥬",
+    "Arúgula": "🌿",
+    "Sandía": "🍉",
+    "Ayote": "🎃",
+    "Albahaca": "🌿",
 }
 
 STATUS_CLASS = {
