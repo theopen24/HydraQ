@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import calendar
 
 import pandas as pd
@@ -263,6 +263,10 @@ st.markdown(
 .insumo-card {background:rgba(255,255,255,0.95); border:2px solid rgba(255,255,255,0.85); border-radius:16px; padding:12px; margin-bottom:10px; color:#0f172a;}
 .insumo-name {font-size:16px; font-weight:950; color:#0f3d25;}
 .insumo-meta {font-size:12px; color:#475569; font-weight:750; margin-top:4px;}
+.history-line {font-size:12px; color:#334155; font-weight:750; margin-top:6px;}
+.history-pill {display:inline-block; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:950; margin:2px 3px 2px 0;}
+.next-abono {font-size:12px; color:#0f172a; font-weight:800; margin-top:6px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:7px 8px;}
+.next-abono.overdue {background:#fef2f2; border-color:#fecaca; color:#991b1b;}
 
 </style>
 """,
@@ -410,6 +414,74 @@ def control_status_html(control):
     insumo = control.get("insumo") or "Sin insumo"
     fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else "Sin fecha"
     return f'<div class="control-line">Control fitosanitario <span class="control-pill {cls}">{control.get("estado", "")}</span> · {insumo} · {fecha}</div>'
+
+
+
+def completed_events_for_target(events, target_id, year=None):
+    if events is None or events.empty or not target_id:
+        return pd.DataFrame()
+    subset = events[events["Target_ID"].astype(str) == str(target_id)].copy()
+    if subset.empty:
+        return subset
+    subset["_date"] = subset.apply(event_effective_date, axis=1)
+    subset = subset[subset["_date"].notna()]
+    subset = subset[subset["Estado"].astype(str).str.lower().str.contains("complet", na=False)]
+    if year is not None:
+        subset = subset[pd.to_datetime(subset["_date"]).dt.year == year]
+    return subset
+
+
+def history_summary_html(events, target_id):
+    year = date.today().year
+    subset = completed_events_for_target(events, target_id, year)
+    if subset.empty:
+        return '<div class="history-line">Historial año: <span class="history-pill">Sin eventos completados</span></div>'
+    subset["_key"] = subset["Tipo_Evento"].fillna("") + ": " + subset["Nombre_Insumo"].fillna("Sin insumo")
+    counts = subset.groupby("_key").size().sort_values(ascending=False)
+    pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
+    return f'<div class="history-line">Historial año: {pills}</div>'
+
+
+def insumo_metadata(insumos, insumo_id=None, nombre=None):
+    if insumos is None or insumos.empty:
+        return {}
+    df = insumos.copy()
+    row = None
+    if insumo_id and "ID_Insumo" in df.columns:
+        m = df[df["ID_Insumo"].astype(str) == str(insumo_id)]
+        if not m.empty:
+            row = m.iloc[0]
+    if row is None and nombre and "Nombre" in df.columns:
+        m = df[df["Nombre"].astype(str).str.lower() == str(nombre).lower()]
+        if not m.empty:
+            row = m.iloc[0]
+    if row is None:
+        return {}
+    return {k: row.get(k, "") for k in df.columns}
+
+
+def next_soil_abono_html(events, insumos, target_id, estado_fenologico=""):
+    if events is None or events.empty or not target_id:
+        return '<div class="next-abono">Próximo abono: sin historial para calcular frecuencia.</div>'
+    subset = completed_events_for_target(events, target_id)
+    subset = subset[subset["Tipo_Evento"].astype(str).str.lower() == "abono tierra"] if not subset.empty else subset
+    if subset.empty:
+        return '<div class="next-abono">Próximo abono: sin abonada de tierra registrada.</div>'
+    subset = subset.sort_values("_date")
+    last = subset.iloc[-1]
+    meta = insumo_metadata(insumos, last.get("ID_Insumo"), last.get("Nombre_Insumo"))
+    freq = pd.to_numeric(meta.get("Frecuencia_Dias", None), errors="coerce")
+    insumo = last.get("Nombre_Insumo") or meta.get("Nombre") or "Abono tierra"
+    last_date = pd.to_datetime(last.get("_date")).date()
+    cantidad = meta.get("Cantidad_Guia", "") or "Según criterio"
+    momento = meta.get("Momento_Aplicacion", "") or "Según estado del árbol"
+    if pd.isna(freq) or float(freq) <= 0:
+        return f'<div class="next-abono">Último abono: {insumo} · {fmt_date(last_date)} · Cantidad: {cantidad}</div>'
+    next_date = last_date + timedelta(days=int(freq))
+    days = (next_date - date.today()).days
+    cls = "next-abono overdue" if days <= 0 else "next-abono"
+    timing = "vencido" if days < 0 else "hoy" if days == 0 else f"en {days} días"
+    return f'<div class="{cls}">Próximo abono sugerido: {insumo} · {fmt_date(next_date)} ({timing})<br>Cantidad guía: {cantidad}<br>Momento: {momento}</div>'
 
 def clean_view(df):
     out = pd.DataFrame()
@@ -766,8 +838,10 @@ def health_class(value):
         return "health-atencion"
     return "health-bueno"
 
-def render_tree_card(row, events=None):
+def render_tree_card(row, events=None, insumos=None):
     control_html = control_status_html(latest_control_status(events, row.get("Arbol_ID")))
+    history_html = history_summary_html(events, row.get("Arbol_ID"))
+    next_abono_html = next_soil_abono_html(events, insumos, row.get("Arbol_ID"), row.get("Estado_Fenologico", ""))
     st.markdown(f"""
     <div class="tree-card">
         <div class="tree-row">
@@ -778,12 +852,14 @@ def render_tree_card(row, events=None):
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
                 <div class="tree-line">Estado sanitario <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {row['Estado_Sanitario']}</span></div>
                 {control_html}
+                {history_html}
+                {next_abono_html}
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-def render_arboles_view(trees, events):
+def render_arboles_view(trees, events, insumos):
     c1, c2 = st.columns([1,1])
     with c1:
         finca_sel = st.selectbox("Finca", ["Todas"] + [f for f in ["Moravia","Frailes"] if f in trees["Finca"].unique()], key="tree_finca")
@@ -800,7 +876,7 @@ def render_arboles_view(trees, events):
             cols = st.columns(4)
             for col, (_, row) in zip(cols, records[start:start+4]):
                 with col:
-                    render_tree_card(row, events)
+                    render_tree_card(row, events, insumos)
 
 
 def render_eventos_view(events, insumos):
@@ -873,6 +949,9 @@ def render_eventos_view(events, insumos):
                             <div class="insumo-card">
                                 <div class="insumo-name">{row.get("Nombre", "")}</div>
                                 <div class="insumo-meta">{row.get("Uso_Principal", "")}</div>
+                                <div class="insumo-meta"><b>Cantidad guía:</b> {row.get("Cantidad_Guia", "Según criterio")}</div>
+                                <div class="insumo-meta"><b>Momento:</b> {row.get("Momento_Aplicacion", "Según estado")}</div>
+                                <div class="insumo-meta"><b>Frecuencia:</b> {row.get("Frecuencia_Dias", "") if str(row.get("Frecuencia_Dias", "")).strip() else "Sin regla"} días</div>
                                 <div class="insumo-meta"><b>{compra}</b></div>
                             </div>
                             """
@@ -946,7 +1025,7 @@ with tab_camas:
                     bed_panel(unit_row, crops, eventos)
 
 with tab_arboles:
-    render_arboles_view(trees, eventos)
+    render_arboles_view(trees, eventos, insumos)
 
 with tab_eventos:
     render_eventos_view(eventos, insumos)
