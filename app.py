@@ -4,19 +4,20 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Finca OS Dev", layout="wide", page_icon="🌱")
+st.set_page_config(page_title="Hydra Q FincaOS", layout="wide", page_icon="🌱")
 
-DATA_FILE = "FincaOS_Data.xlsx"
+POSSIBLE_FILES = [
+    "Hydra_Q_FincaOS_V7_RealData_Streamlit.xlsx",
+    "Hydra_Q_FincaOS_V6_MVP_DEV_LookerReady.xlsx",
+    "Hydra_Q_FincaOS_V6_MVP_DEV_LookerReady_UPDATED.xlsx",
+]
+
 BASE_DIR = Path(__file__).parent
-FILE_PATH = BASE_DIR / DATA_FILE
-if not FILE_PATH.exists():
-    st.error(f"No se encontró el archivo de datos requerido: {DATA_FILE}")
-    st.stop()
+FILE_PATH = next((BASE_DIR / f for f in POSSIBLE_FILES if (BASE_DIR / f).exists()), BASE_DIR / POSSIBLE_FILES[0])
 
 CROP_META = {
-    "Disponible": {"icon": "➕", "class": "available"},
-    "Lechuga": {"icon": "🥬", "class": "lettuce"},
-    "Acelga": {"icon": "🍀", "class": "chard"},
+    "Lechuga": {"icon": "🥬", "class": "leafy"},
+    "Acelga": {"icon": "☘️", "class": "chard"},
     "Pepino": {"icon": "🥒", "class": "cucumber"},
     "Sandía": {"icon": "🍉", "class": "watermelon"},
     "Ayote": {"icon": "🎃", "class": "squash"},
@@ -24,101 +25,87 @@ CROP_META = {
     "Tomate cherry": {"icon": "🍅", "class": "tomato-cherry"},
     "Tomate normal": {"icon": "🍅", "class": "tomato"},
     "Culantro": {"icon": "🌿", "class": "cilantro"},
-    "Cebolla blanca": {"icon": "🧅", "class": "onion"},
-    "Cebolla morada": {"icon": "🧅", "class": "onion"},
+    "Cebolla blanca": {"icon": "⚪🧅", "class": "onion-white"},
+    "Cebolla morada": {"icon": "🟣🧅", "class": "onion-purple"},
     "Chile dulce": {"icon": "🫑", "class": "pepper"},
-    "Arúgula": {"icon": "🥗", "class": "arugula"},
-    "Arugula": {"icon": "🥗", "class": "arugula"},
+    "Arúgula": {"icon": "🍃", "class": "arugula"},
     "Zucchini": {"icon": "🥒", "class": "zucchini"},
     "Zuchinni": {"icon": "🥒", "class": "zucchini"},
     "Zanahoria": {"icon": "🥕", "class": "carrot"},
     "Cebollino": {"icon": "🌾", "class": "chives"},
-    "Perejil italiano": {"icon": "☘️", "class": "parsley"},
-    "Perejil normal": {"icon": "🌿", "class": "parsley-normal"},
     "Apio": {"icon": "🥬", "class": "celery"},
-    "Espinaca": {"icon": "🍃", "class": "spinach"},
+    "Espinaca": {"icon": "🍀", "class": "spinach"},
 }
 
 STATUS_CLASS = {
     "Activa": "ok",
+    "Próxima cosecha": "warn",
     "Dato faltante": "bad",
     "No activa": "inactive",
-    "Disponible": "available-badge",
 }
 
 st.markdown(
     """
 <style>
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(180deg, #0f3d25 0%, #14532d 42%, #0f3d25 100%);
+    background: linear-gradient(180deg, #0f3d25 0px, #0f3d25 260px, #f4f7f2 260px, #f4f7f2 100%);
 }
 [data-testid="stHeader"] {background: rgba(0,0,0,0);} 
-.block-container {padding-top: 1.35rem;}
-.app-title {
-    color:#ffffff; font-size:42px; font-weight:950; letter-spacing:0.5px;
-    margin:0 0 18px 0; text-shadow:0 2px 8px rgba(0,0,0,0.35);
+.hero {
+    padding: 26px 10px 18px 10px;
+    margin-bottom: 10px;
 }
-.metric-card {
-    background: rgba(255,255,255,0.94);
-    border: 1px solid rgba(255,255,255,0.55);
-    border-radius: 18px;
-    padding: 13px 14px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
-    min-height: 88px;
+.main-title {
+    font-size: 46px;
+    line-height: 1.05;
+    font-weight: 900;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.5px;
 }
-.metric-label {color:#31543d; font-size:12px; font-weight:900; margin-bottom:6px;}
-.metric-value {color:#0f3d25; font-size:24px; font-weight:950; line-height:1.05;}
-.metric-note {color:#64748b; font-size:11px; margin-top:5px;}
+.hero-chip {
+    display: inline-block;
+    background: rgba(255,255,255,0.16);
+    color: #e9ffe8;
+    padding: 7px 12px;
+    border-radius: 999px;
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
 .section-title {
     font-size: 28px;
-    font-weight: 950;
+    font-weight: 900;
     color: white;
-    margin: 26px 0 14px 0;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(255,255,255,0.25);
+    background: #14532d;
+    border-radius: 16px;
+    padding: 12px 18px;
+    margin: 22px 0 14px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
 }
-/* Borde reforzado para que las camas se vean bien en Edge/AOC y Chrome/Samsung */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border: 2.5px solid rgba(255,255,255,0.82) !important;
-    border-radius: 20px !important;
-    background: rgba(255,255,255,0.10) !important;
-    box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
-}
-[data-testid="stVerticalBlockBorderWrapper"]:hover {
-    border-color: rgba(255,255,255,0.98) !important;
-}
+.small-muted {color:#5f6f61; font-size:13px;}
 .bed-header {display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;}
-.bed-title {font-size: 20px; font-weight: 950; color: #ffffff; text-shadow:0 1px 4px rgba(0,0,0,0.35);}
-.badge {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900;}
+.bed-title {font-size: 20px; font-weight: 900; color: #0f3d25;}
+.badge {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:800;}
 .ok {background:#dcfce7; color:#166534;}
+.warn {background:#fef3c7; color:#92400e;}
 .bad {background:#fee2e2; color:#991b1b;}
 .inactive {background:#e5e7eb; color:#374151;}
-.available-badge {background:#dbeafe; color:#1d4ed8;}
 .crop-card {
     border: 1px solid #e3eadf;
     background: #ffffff;
     border-radius: 16px;
     padding: 12px 10px;
     margin-bottom: 10px;
-    min-height: 188px;
-    box-shadow: 0 2px 8px rgba(15, 61, 37, 0.08);
-}
-.crop-card.harvest-ready {
-    background: #e7f8df;
-    border: 2px solid #86c96f;
-    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.18);
-}
-.crop-card.available-card {
-    background: #eef8ff;
-    border: 2px dashed #60a5fa;
     min-height: 150px;
+    box-shadow: 0 2px 8px rgba(15, 61, 37, 0.06);
 }
 .icon-circle {
-    width: 56px; height: 56px; border-radius: 50%;
+    width: 58px; height: 58px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 29px; margin-bottom: 8px;
+    font-size: 30px; margin-bottom: 8px;
 }
-.lettuce {background:#dcfce7;}
+.leafy {background:#dcfce7;}
 .chard {background:#d9f99d;}
 .cucumber {background:#bbf7d0;}
 .watermelon {background:#fee2e2;}
@@ -127,42 +114,21 @@ st.markdown(
 .tomato-cherry {background:#fecaca;}
 .tomato {background:#fee2e2;}
 .cilantro {background:#d1fae5;}
-.onion {background:#f3f4f6;}
+.onion-white {background:#f3f4f6;}
+.onion-purple {background:#ede9fe;}
 .pepper {background:#dcfce7;}
-.arugula {background:#fef3c7;}
+.arugula {background:#ecfccb;}
 .zucchini {background:#ccfbf1;}
 .carrot {background:#fed7aa;}
 .chives {background:#ecfccb;}
-.parsley {background:#d1fae5;}
-.parsley-normal {background:#bbf7d0;}
 .celery {background:#e0f2fe;}
 .spinach {background:#dcfce7;}
-.available {background:#dbeafe;}
-.crop-name {font-weight: 950; color:#123d24; font-size: 15px; margin-bottom:2px;}
-.qty {font-size: 18px; font-weight: 950; color:#111827;}
-.info-line {font-size: 13px; color:#475569; margin-top: 3px;}
-.info-line.past-harvest {color:#b91c1c; font-weight:950;}
-.empty-card {padding: 24px 10px; text-align:center; color:#6b7280; font-weight:800;}
-.hq-brand {
-    display:flex; align-items:center; gap:12px;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 18px;
-    padding: 12px 12px; margin-bottom: 18px;
-}
-.hq-mark {
-    width: 42px; height: 42px; border-radius: 14px;
-    display:flex; align-items:center; justify-content:center;
-    background: #ecfccb; color:#14532d !important;
-    font-weight: 950; font-size: 16px; letter-spacing:-0.5px;
-}
-.hq-name {font-size:18px; font-weight:950; line-height:1; color:#ffffff !important;}
-.hq-sub {font-size:12px; font-weight:800; color:#bbf7d0 !important; margin-top:3px;}
-[data-testid="stSidebar"] {background: #0b2f1a;}
-[data-testid="stSidebar"] * {color: #ffffff !important;}
-[data-testid="stSidebar"] div[data-baseweb="select"] * {color: #0f172a !important;}
-[data-testid="stSidebar"] input {color: #0f172a !important;}
-[data-testid="stSidebar"] label {color: #ffffff !important; font-weight: 800;}
+.crop-name {font-weight: 900; color:#123d24; font-size: 15px; margin-bottom:2px;}
+.qty {font-size: 18px; font-weight: 900; color:#111827;}
+.info-line {font-size: 13px; color:#475569; margin-top: 2px;}
+.detail-box {background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-top:8px; font-size:13px;}
+.empty-card {padding: 24px 10px; text-align:center; color:#6b7280; font-weight:700;}
+.stButton button {width: 100%; border-radius: 10px; font-weight: 700;}
 </style>
 """,
     unsafe_allow_html=True,
@@ -176,21 +142,7 @@ def find_col(df, candidates, default=None):
     return default
 
 
-def is_available_placeholder(row):
-    return str(row.get("Cultivo", "")).strip().lower() == "disponible" or str(row.get("Estado_Actual", "")).strip().lower() == "disponible"
-
-
-def is_harvest_ready(row):
-    if is_available_placeholder(row):
-        return False
-    today = date.today()
-    for col in ["Cosecha_Min", "Cosecha_Max"]:
-        val = row.get(col)
-        if pd.notna(val) and pd.to_datetime(val).date() < today:
-            return True
-    return False
-
-
+@st.cache_data
 def load_data():
     xl = pd.ExcelFile(FILE_PATH)
     fincas = pd.read_excel(FILE_PATH, sheet_name="Fincas")
@@ -233,11 +185,6 @@ def clean_view(df):
         source = find_col(df, [col], None)
         out[col] = pd.to_datetime(df[source], errors="coerce") if source else pd.NaT
 
-    # Regla: Disponible no debe tener fechas ni cosechas.
-    mask_disp = out.apply(is_available_placeholder, axis=1)
-    out.loc[mask_disp, ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]] = pd.NaT
-
-    out["Cosecha_Disponible"] = out.apply(is_harvest_ready, axis=1)
     out["Mes_Cosecha"] = out["Cosecha_Min"].dt.strftime("%Y-%m").fillna("Sin fecha")
     out["Visual_Status"] = out.apply(visual_status, axis=1)
     return out
@@ -246,12 +193,12 @@ def clean_view(df):
 def visual_status(row):
     if str(row.get("Estado_Unidad", "")).lower().startswith("no activa"):
         return "No activa"
-    if is_available_placeholder(row):
-        return "Disponible"
     if pd.isna(row["Fecha_Base"]) or "falta" in str(row["Alerta_Datos"]).lower() or "incompleta" in str(row["Alerta_Datos"]).lower():
         return "Dato faltante"
-    if is_harvest_ready(row):
-        return "Disponible"
+    if pd.notna(row["Cosecha_Min"]):
+        days = (row["Cosecha_Min"].date() - date.today()).days
+        if 0 <= days <= 30:
+            return "Próxima cosecha"
     return "Activa"
 
 
@@ -269,69 +216,52 @@ def base_date_label(row):
     return "Sin fecha base"
 
 
-def days_html(value, prefix):
-    if pd.isna(value):
-        return f'<div class="info-line">{prefix}: Sin fecha</div>'
-    days = (pd.to_datetime(value).date() - date.today()).days
+def days_to_harvest(row):
+    if pd.isna(row["Cosecha_Min"]):
+        return "Sin cosecha estimada"
+    days = (row["Cosecha_Min"].date() - date.today()).days
     if days > 0:
-        return f'<div class="info-line">{prefix}: en {days} días</div>'
+        return f"Cosecha en {days} días"
     if days == 0:
-        return f'<div class="info-line past-harvest"><b>{prefix}: hoy</b></div>'
-    return f'<div class="info-line past-harvest"><b>{prefix}: hace {abs(days)} días</b></div>'
-
-
-def display_state(row):
-    if row.get("Visual_Status") == "Disponible":
-        return "Disponible"
-    return row["Estado_Actual"]
-
-
-def metric_card(label, value, note=""):
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-note">{note}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        return "Cosecha desde hoy"
+    return f"Cosecha estimada hace {abs(days)} días"
 
 
 def crop_card(row, idx):
     crop = row["Cultivo"]
-    meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
+    meta = CROP_META.get(crop, {"icon": "🌱", "class": "leafy"})
+    detail_key = f"detail_{row['Siembra_ID']}_{idx}"
 
-    if is_available_placeholder(row):
-        st.markdown(
-            f"""
-            <div class="crop-card available-card">
-                <div class="icon-circle {meta['class']}">{meta['icon']}</div>
-                <div class="crop-name">Disponible</div>
-                <div class="qty">Espacio disponible</div>
-                <div class="info-line">Estado: <b>Disponible</b></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
-
-    card_class = "crop-card harvest-ready" if row.get("Cosecha_Disponible", False) else "crop-card"
     st.markdown(
         f"""
-        <div class="{card_class}">
+        <div class="crop-card">
             <div class="icon-circle {meta['class']}">{meta['icon']}</div>
             <div class="crop-name">{crop}</div>
             <div class="qty">{row['Cantidad']}</div>
-            <div class="info-line">Estado: <b>{display_state(row)}</b></div>
+            <div class="info-line">Estado: <b>{row['Estado_Actual']}</b></div>
             <div class="info-line">{base_date_label(row)}</div>
-            {days_html(row['Cosecha_Min'], 'Cosecha min')}
-            {days_html(row['Cosecha_Max'], 'Cosecha max')}
+            <div class="info-line">{days_to_harvest(row)}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    if st.button("Ver fechas" if not st.session_state.get(detail_key, False) else "Ocultar fechas", key=f"btn_{detail_key}"):
+        st.session_state[detail_key] = not st.session_state.get(detail_key, False)
+
+    if st.session_state.get(detail_key, False):
+        st.markdown(
+            f"""
+            <div class="detail-box">
+                <b>Fecha usada para cálculo:</b> {base_date_label(row)}<br>
+                <b>Fecha siembra:</b> {fmt_date(row['Fecha_Siembra'])}<br>
+                <b>Fecha trasplante:</b> {fmt_date(row['Fecha_Trasplante'])}<br>
+                <b>Cosecha mínima:</b> {fmt_date(row['Cosecha_Min'])}<br>
+                <b>Cosecha máxima:</b> {fmt_date(row['Cosecha_Max'])}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def unit_status(unit_row, group):
@@ -340,19 +270,9 @@ def unit_status(unit_row, group):
     if group is not None and len(group) > 0:
         if (group["Visual_Status"] == "Dato faltante").any():
             return "Dato faltante"
-        if (group["Visual_Status"] == "Disponible").any():
-            return "Disponible"
+        if (group["Visual_Status"] == "Próxima cosecha").any():
+            return "Próxima cosecha"
     return "Activa"
-
-
-def sort_crops_for_display(crops_df):
-    # Regla V12: cualquier espacio Disponible siempre va al final de la cama.
-    if crops_df is None or crops_df.empty:
-        return crops_df
-    tmp = crops_df.copy()
-    tmp["_available_sort"] = tmp.apply(lambda r: 1 if is_available_placeholder(r) else 0, axis=1)
-    tmp["_ready_sort"] = tmp["Cosecha_Disponible"].apply(lambda x: 0 if bool(x) else 1)
-    return tmp.sort_values(["_available_sort", "_ready_sort", "Cultivo"]).drop(columns=["_available_sort", "_ready_sort"])
 
 
 def bed_panel(unit_row, crops_df):
@@ -369,14 +289,11 @@ def bed_panel(unit_row, crops_df):
             """,
             unsafe_allow_html=True,
         )
-        if str(unit_row.get("Estado_Unidad", "")).lower().startswith("no activa"):
-            st.markdown('<div class="empty-card">No activa</div>', unsafe_allow_html=True)
-            return
         if crops_df is None or crops_df.empty:
             st.markdown('<div class="empty-card">Sin cultivos activos</div>', unsafe_allow_html=True)
             return
         cols_per_row = 2 if len(crops_df) <= 4 else 3
-        records = list(sort_crops_for_display(crops_df).iterrows())
+        records = list(crops_df.sort_values("Cultivo").iterrows())
         for start in range(0, len(records), cols_per_row):
             cols = st.columns(cols_per_row)
             for col, (idx, row) in zip(cols, records[start:start + cols_per_row]):
@@ -386,30 +303,21 @@ def bed_panel(unit_row, crops_df):
 
 df, units = load_data()
 
-st.markdown('<div class="app-title">Finca OS Dev</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="hero"><h1 class="main-title">¿Qué hay sembrado en cada cama?</h1>'
+    '<div class="hero-chip">Vista interactiva por finca, cama y cultivo</div></div>',
+    unsafe_allow_html=True,
+)
 
 with st.sidebar:
-    st.markdown(
-        """
-        <div class="hq-brand">
-            <div class="hq-mark">HQ</div>
-            <div>
-                <div class="hq-name">Hydra Q</div>
-                <div class="hq-sub">FincaOS Dev</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
     st.header("Filtros")
-    st.caption(f"Datos: {DATA_FILE}")
-    finca_options = [f for f in ["Moravia", "Frailes"] if f in set(units["Finca"].dropna().unique())] + [f for f in sorted(units["Finca"].dropna().unique()) if f not in ["Moravia", "Frailes"]]
+    finca_options = sorted(units["Finca"].dropna().unique())
     finca_filter = st.multiselect("Finca", finca_options, default=finca_options)
     unidad_options = sorted(units[units["Finca"].isin(finca_filter)]["Unidad"].dropna().unique()) if finca_filter else sorted(units["Unidad"].dropna().unique())
     unidad_filter = st.multiselect("Unidad", unidad_options)
     cultivo_filter = st.multiselect("Cultivo", sorted(df["Cultivo"].dropna().unique()))
     estado_filter = st.multiselect("Estado visual", sorted(set(list(df["Visual_Status"].dropna().unique()) + ["No activa"])))
-    show_detail_table = st.checkbox("Mostrar tabla detalle", value=False)
+    show_detail_table = st.checkbox("Mostrar tabla detalle", value=True)
 
 filtered_units = units[units["Finca"].isin(finca_filter)] if finca_filter else units.copy()
 if unidad_filter:
@@ -425,33 +333,13 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
-available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
-explicit_available = filtered[filtered["Cultivo"] == "Disponible"]
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Cultivos", len(filtered))
+m2.metric("Camas visibles", filtered_units["Unidad"].nunique())
+m3.metric("Próxima cosecha", int((filtered["Visual_Status"] == "Próxima cosecha").sum()))
+m4.metric("No activas", int((filtered_units["Estado_Unidad"] == "No activa").sum()))
 
-harvest_date = "Sin disponible"
-harvest_note = ""
-if not available_harvest.empty:
-    available_harvest["days_past"] = (date.today() - available_harvest["Cosecha_Min"].dt.date).apply(lambda x: x.days if pd.notna(x) else 0)
-    item = available_harvest.sort_values("Cosecha_Min").iloc[0]
-    harvest_date = fmt_date(item["Cosecha_Min"])
-    harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
-
-m1, m2, m3, m4, m5, m6 = st.columns(6)
-with m1:
-    metric_card("Cultivos activos", len(active_crops), "sin contar espacios disponibles")
-with m2:
-    metric_card("Camas visibles", filtered_units["Unidad"].nunique(), "según filtros")
-with m3:
-    metric_card("Cosecha Disponible", harvest_date, harvest_note)
-with m4:
-    metric_card("Cosechas disponibles", len(available_harvest), "cosecha mínima en el pasado")
-with m5:
-    metric_card("Espacios disponibles", len(explicit_available), "oportunidad de siembra")
-with m6:
-    metric_card("Errores de datos", int((filtered["Visual_Status"] == "Dato faltante").sum()), "falta información")
-
-for finca, unit_group in filtered_units.groupby("Finca", sort=False):
+for finca, unit_group in filtered_units.groupby("Finca", sort=True):
     st.markdown(f'<div class="section-title">📍 {finca}</div>', unsafe_allow_html=True)
     unit_records = list(unit_group.sort_values("Unidad").iterrows())
     for start in range(0, len(unit_records), 2):
