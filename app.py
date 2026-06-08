@@ -6,10 +6,8 @@ import streamlit as st
 
 st.set_page_config(page_title="Hydra Q FincaOS", layout="wide", page_icon="🌱")
 
-POSSIBLE_FILES = [
-    "Hydra_Q_FincaOS_V7_RealData_Streamlit.xlsx",
-    "Hydra_Q_FincaOS_V6_MVP_DEV_LookerReady.xlsx",
-    "Hydra_Q_FincaOS_V6_MVP_DEV_LookerReady_UPDATED.xlsx",
+EXCEL_CANDIDATES = [
+    "Hydra_Q_FincaOS_V9_Streamlit.xlsx",
 ]
 
 BASE_DIR = Path(__file__).parent
