@@ -167,11 +167,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-from PIL import Image
-import streamlit as st
 
-logo = Image.open("hydraq_logo.png")
-st.sidebar.image(logo, width=220)
 
 def find_col(df, candidates, default=None):
     for c in candidates:
