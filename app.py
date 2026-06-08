@@ -163,20 +163,32 @@ st.markdown(
 }
 .calendar-title {color:#0f172a; font-size:26px; font-weight:950; margin-bottom:4px;}
 .calendar-note {color:#64748b; font-size:13px; font-weight:700;}
+.calendar-filter-panel {
+    background: rgba(8, 28, 18, 0.86);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin: 8px 0 16px 0;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+}
+.calendar-filter-panel label, .calendar-filter-panel p, .calendar-filter-panel span {
+    color: #ffffff !important;
+    font-weight: 800;
+}
 .week-card {
     background: rgba(255,255,255,0.94);
-    border: 2px solid rgba(255,255,255,0.84);
-    border-radius: 18px;
-    padding: 14px;
-    min-height: 320px;
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 16px;
+    padding: 11px;
+    min-height: 210px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.13);
 }
-.week-title {font-size:18px; font-weight:950; color:#0f3d25; margin-bottom:2px;}
-.week-range {font-size:12px; color:#64748b; font-weight:800; margin-bottom:12px;}
+.week-title {font-size:16px; font-weight:950; color:#0f3d25; margin-bottom:2px;}
+.week-range {font-size:11px; color:#64748b; font-weight:800; margin-bottom:12px;}
 .event-card {
-    border-radius: 14px;
-    padding: 10px 10px;
-    margin-bottom: 10px;
+    border-radius: 12px;
+    padding: 8px 8px;
+    margin-bottom: 8px;
     border: 1px solid #e5e7eb;
     background:#ffffff;
 }
@@ -184,14 +196,14 @@ st.markdown(
 .event-card.soon {background:#fffbeb; border:2px solid #fbbf24;}
 .event-card.future {background:#f8fafc; border:1px solid #cbd5e1;}
 .event-row {display:flex; gap:9px; align-items:flex-start;}
-.event-icon {font-size:26px; width:34px; text-align:center;}
-.event-crop {font-weight:950; color:#0f172a; font-size:14px;}
-.event-meta {font-size:12px; color:#475569; margin-top:2px; font-weight:700;}
-.event-date {font-size:12px; margin-top:4px; font-weight:950;}
+.event-icon {font-size:22px; width:28px; text-align:center;}
+.event-crop {font-weight:950; color:#0f172a; font-size:13px;}
+.event-meta {font-size:11px; color:#475569; margin-top:2px; font-weight:700;}
+.event-date {font-size:11px; margin-top:4px; font-weight:950;}
 .ready-text {color:#15803d;}
 .soon-text {color:#b45309;}
 .future-text {color:#2563eb;}
-.no-events {color:#94a3b8; font-size:13px; font-weight:800; text-align:center; margin-top:20px;}
+.no-events {color:#94a3b8; font-size:12px; font-weight:800; text-align:center; margin-top:12px;}
 </style>
 """,
     unsafe_allow_html=True,
@@ -464,7 +476,7 @@ def calendar_event_card(row):
     )
 
 
-def render_calendar_view(filtered_df):
+def render_calendar_view(all_df):
     today = date.today()
     month_options = []
     for offset in range(-2, 7):
@@ -480,56 +492,88 @@ def render_calendar_view(filtered_df):
 
     labels = [x[0] for x in month_options]
     default_label = f"{MONTHS_ES[today.month]} {today.year}"
-    selected_label = st.selectbox("Mes del calendario", labels, index=labels.index(default_label) if default_label in labels else 0)
+
+    st.markdown('<div class="calendar-filter-panel">', unsafe_allow_html=True)
+    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1.4, 1.1, 1.1])
+    with c1:
+        selected_label = st.selectbox("Mes", labels, index=labels.index(default_label) if default_label in labels else 0, key="cal_mes")
     _, selected_year, selected_month = next(x for x in month_options if x[0] == selected_label)
 
-    calendar_df = filtered_df.copy()
-    calendar_df = calendar_df[
-        (calendar_df["Cultivo"] != "Disponible")
-        & (calendar_df["Estado_Unidad"] != "No activa")
-        & calendar_df["Cosecha_Min"].notna()
+    calendar_base = all_df.copy()
+    calendar_base = calendar_base[
+        (calendar_base["Cultivo"] != "Disponible")
+        & (calendar_base["Estado_Unidad"] != "No activa")
+        & calendar_base["Cosecha_Min"].notna()
     ].copy()
-    calendar_df["Cosecha_Date"] = calendar_df["Cosecha_Min"].dt.date
-    calendar_df["Month_Match"] = calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)
-    month_df = calendar_df[calendar_df["Month_Match"]].copy()
-    month_df["Week_Num"] = month_df["Cosecha_Date"].apply(app_week_number)
 
-    available_count = int((calendar_df["Cosecha_Date"] < today).sum())
-    soon_count = int(((calendar_df["Cosecha_Date"] >= today) & (calendar_df["Cosecha_Date"] <= today + pd.Timedelta(days=15))).sum())
-    month_count = len(month_df)
-    future_count = int((calendar_df["Cosecha_Date"] > today + pd.Timedelta(days=15)).sum())
+    with c2:
+        fincas = ["Todas"] + [f for f in ["Moravia", "Frailes"] if f in set(calendar_base["Finca"].dropna().unique())]
+        fincas += [f for f in sorted(calendar_base["Finca"].dropna().unique()) if f not in fincas]
+        cal_finca = st.selectbox("Finca", fincas, key="cal_finca")
+    if cal_finca != "Todas":
+        calendar_base = calendar_base[calendar_base["Finca"] == cal_finca]
+
+    with c3:
+        camas = ["Todas"] + sorted(calendar_base["Unidad"].dropna().unique())
+        cal_cama = st.selectbox("Cama", camas, key="cal_cama")
+    if cal_cama != "Todas":
+        calendar_base = calendar_base[calendar_base["Unidad"] == cal_cama]
+
+    with c4:
+        only_ready = st.checkbox("Solo cosechas disponibles", value=False, key="cal_only_ready")
+    with c5:
+        only_soon = st.checkbox("Solo próximos 15 días", value=False, key="cal_only_soon")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    calendar_df = calendar_base.copy()
+    calendar_df["Cosecha_Date"] = calendar_df["Cosecha_Min"].dt.date
+
+    if only_ready or only_soon:
+        ready_mask = calendar_df["Cosecha_Date"] < today
+        soon_mask = (calendar_df["Cosecha_Date"] >= today) & (calendar_df["Cosecha_Date"] <= today + pd.Timedelta(days=15))
+        selected_mask = False
+        if only_ready:
+            selected_mask = selected_mask | ready_mask
+        if only_soon:
+            selected_mask = selected_mask | soon_mask
+        calendar_df = calendar_df[selected_mask]
+    else:
+        calendar_df = calendar_df[calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)]
+
+    if calendar_df.empty:
+        month_df = calendar_df.copy()
+    else:
+        month_df = calendar_df.copy()
+        month_df["Week_Num"] = month_df["Cosecha_Date"].apply(app_week_number)
 
     st.markdown(
         f"""
         <div class="calendar-toolbar">
             <div class="calendar-title">Calendario · {selected_label}</div>
-            <div class="calendar-note">Las semanas usan secuencia anual: la semana del 1 de enero es Semana 1.</div>
+            <div class="calendar-note">Las semanas usan secuencia anual: la semana del 1 de enero es Semana 1. Esta vista no usa contadores todavía.</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        metric_card("Disponibles", available_count, "cosecha mínima pasada")
-    with c2:
-        metric_card("Próximas 15 días", soon_count, "desde hoy")
-    with c3:
-        metric_card("En el mes", month_count, selected_label)
-    with c4:
-        metric_card("Futuras", future_count, "más de 15 días")
+    if only_ready or only_soon:
+        if month_df.empty:
+            week_nums = []
+        else:
+            week_nums = sorted(month_df["Week_Num"].unique().tolist())
+    else:
+        week_nums = month_week_numbers(selected_year, selected_month)
 
-    week_nums = month_week_numbers(selected_year, selected_month)
-    for start in range(0, len(week_nums), 3):
-        cols = st.columns(3)
-        for col, week_num in zip(cols, week_nums[start:start + 3]):
+    for start in range(0, len(week_nums), 4):
+        cols = st.columns(4)
+        for col, week_num in zip(cols, week_nums[start:start + 4]):
             with col:
-                week_start, week_end = week_range_for_number(selected_year, week_num)
+                week_start, week_end = week_range_for_number(selected_year, int(week_num))
                 events = month_df[month_df["Week_Num"] == week_num].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
                 st.markdown(
                     f"""
                     <div class="week-card">
-                        <div class="week-title">Semana {week_num}</div>
+                        <div class="week-title">Semana {int(week_num)}</div>
                         <div class="week-range">{week_start.strftime('%d %b')} – {week_end.strftime('%d %b')}</div>
                     """,
                     unsafe_allow_html=True,
@@ -541,6 +585,8 @@ def render_calendar_view(filtered_df):
                         calendar_event_card(row)
                 st.markdown("</div>", unsafe_allow_html=True)
 
+    if len(week_nums) == 0:
+        st.markdown('<div class="calendar-toolbar"><div class="calendar-note">No hay cosechas para los filtros seleccionados.</div></div>', unsafe_allow_html=True)
 
 df, units = load_data()
 
@@ -571,34 +617,34 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
-available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
-explicit_available = filtered[filtered["Cultivo"] == "Disponible"]
-
-harvest_date = "Sin disponible"
-harvest_note = ""
-if not available_harvest.empty:
-    item = available_harvest.sort_values("Cosecha_Min").iloc[0]
-    harvest_date = fmt_date(item["Cosecha_Min"])
-    harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
-
-m1, m2, m3, m4, m5, m6 = st.columns(6)
-with m1:
-    metric_card("Cultivos activos", len(active_crops), "sin contar espacios disponibles")
-with m2:
-    metric_card("Camas visibles", filtered_units["Unidad"].nunique(), "según filtros")
-with m3:
-    metric_card("Cosecha Disponible", harvest_date, harvest_note)
-with m4:
-    metric_card("Cosechas disponibles", len(available_harvest), "cosecha mínima en el pasado")
-with m5:
-    metric_card("Espacios disponibles", len(explicit_available), "oportunidad de siembra")
-with m6:
-    metric_card("Errores de datos", int((filtered["Visual_Status"] == "Dato faltante").sum()), "falta información")
-
 tab_camas, tab_calendario = st.tabs(["🌱 Camas", "📅 Calendario"])
 
 with tab_camas:
+    active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
+    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
+    explicit_available = filtered[filtered["Cultivo"] == "Disponible"]
+
+    harvest_date = "Sin disponible"
+    harvest_note = ""
+    if not available_harvest.empty:
+        item = available_harvest.sort_values("Cosecha_Min").iloc[0]
+        harvest_date = fmt_date(item["Cosecha_Min"])
+        harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
+
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    with m1:
+        metric_card("Cultivos activos", len(active_crops), "sin contar espacios disponibles")
+    with m2:
+        metric_card("Camas visibles", filtered_units["Unidad"].nunique(), "según filtros")
+    with m3:
+        metric_card("Cosecha Disponible", harvest_date, harvest_note)
+    with m4:
+        metric_card("Cosechas disponibles", len(available_harvest), "cosecha mínima en el pasado")
+    with m5:
+        metric_card("Espacios disponibles", len(explicit_available), "oportunidad de siembra")
+    with m6:
+        metric_card("Errores de datos", int((filtered["Visual_Status"] == "Dato faltante").sum()), "falta información")
+
     for finca, unit_group in filtered_units.groupby("Finca", sort=False):
         st.markdown(f'<div class="section-title">📍 {finca}</div>', unsafe_allow_html=True)
         unit_records = list(unit_group.sort_values("Unidad").iterrows())
@@ -610,7 +656,7 @@ with tab_camas:
                     bed_panel(unit_row, crops)
 
 with tab_calendario:
-    render_calendar_view(filtered)
+    render_calendar_view(df)
 
 if show_detail_table:
     st.divider()
