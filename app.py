@@ -247,6 +247,23 @@ st.markdown(
 .health-bueno {background:#dcfce7; color:#166534;}
 .health-atencion {background:#fef3c7; color:#92400e;}
 .health-estres {background:#fee2e2; color:#991b1b;}
+
+.event-section-title {font-size:24px; font-weight:950; color:#ffffff; margin:24px 0 12px 0; border-bottom:2px solid rgba(255,255,255,0.25); padding-bottom:6px;}
+.ag-event-card {background: rgba(255,255,255,0.95); border: 2px solid rgba(255,255,255,0.88); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.14);}
+.ag-event-top {display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+.ag-event-title {font-size:16px; font-weight:950; color:#0f172a;}
+.ag-event-meta {font-size:12px; color:#475569; font-weight:750; margin-top:3px;}
+.ag-event-pill {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:950;}
+.event-completado {background:#dcfce7; color:#166534;}
+.event-pendiente {background:#fef3c7; color:#92400e;}
+.event-no-empezado {background:#e0f2fe; color:#075985;}
+.event-vencido {background:#fee2e2; color:#991b1b;}
+.control-line {font-size:12px; color:#334155; font-weight:750; margin-top:6px;}
+.control-pill {display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:950; margin-left:5px;}
+.insumo-card {background:rgba(255,255,255,0.95); border:2px solid rgba(255,255,255,0.85); border-radius:16px; padding:12px; margin-bottom:10px; color:#0f172a;}
+.insumo-name {font-size:16px; font-weight:950; color:#0f3d25;}
+.insumo-meta {font-size:12px; color:#475569; font-weight:750; margin-top:4px;}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -265,6 +282,8 @@ def is_available_placeholder(row):
 
 
 def is_harvest_ready(row):
+    control_html = control_status_html(latest_control_status(events, row.get("Siembra_ID")))
+
     if is_available_placeholder(row):
         return False
     today = date.today()
@@ -278,6 +297,8 @@ def is_harvest_ready(row):
 def visual_status(row):
     if str(row.get("Estado_Unidad", "")).lower().startswith("no activa"):
         return "No activa"
+    control_html = control_status_html(latest_control_status(events, row.get("Siembra_ID")))
+
     if is_available_placeholder(row):
         return "Disponible"
     if pd.isna(row["Fecha_Base"]) or "falta" in str(row["Alerta_Datos"]).lower() or "incompleta" in str(row["Alerta_Datos"]).lower():
@@ -301,7 +322,22 @@ def load_data():
         df = df.merge(unidades, on=["Unidad_ID", "Finca_ID"], how="left")
         df = df.merge(cultivos, on="Cultivo_ID", how="left")
 
-    return clean_view(df), clean_units(unidades, fincas)
+    if "Arboles" in xl.sheet_names:
+        arboles = pd.read_excel(FILE_PATH, sheet_name="Arboles")
+    else:
+        arboles = pd.DataFrame(TREE_DATA)
+
+    if "EventosAgricolas" in xl.sheet_names:
+        eventos = pd.read_excel(FILE_PATH, sheet_name="EventosAgricolas")
+    else:
+        eventos = pd.DataFrame(columns=["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID","Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada","Fecha_Realizada","Estado","Notas"])
+
+    if "Insumos" in xl.sheet_names:
+        insumos = pd.read_excel(FILE_PATH, sheet_name="Insumos")
+    else:
+        insumos = pd.DataFrame(columns=["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"])
+
+    return clean_view(df), clean_units(unidades, fincas), clean_trees(arboles), clean_events(eventos), insumos
 
 
 def clean_units(unidades, fincas):
@@ -313,6 +349,71 @@ def clean_units(unidades, fincas):
     out["Estado_Unidad"] = out.get("Estado", "Activa")
     return out
 
+
+
+def clean_trees(arboles):
+    out = arboles.copy()
+    if "Arbol_ID" not in out.columns:
+        out["Arbol_ID"] = [f"ARB_{i:03d}" for i in range(len(out))]
+    if "Arbol" not in out.columns and "Nombre" in out.columns:
+        out["Arbol"] = out["Nombre"]
+    for col in ["Finca", "Arbol", "Icono", "Estado_Fenologico", "Trasplante", "Estado_Sanitario", "Evento_Agricola"]:
+        if col not in out.columns:
+            out[col] = ""
+        out[col] = out[col].fillna("N/A" if col == "Trasplante" else "").astype(str)
+    return out
+
+
+def clean_events(eventos):
+    out = eventos.copy()
+    for col in ["Fecha_Programada", "Fecha_Realizada"]:
+        if col in out.columns:
+            out[col] = pd.to_datetime(out[col], errors="coerce")
+        else:
+            out[col] = pd.NaT
+    for col in ["Tipo_Evento", "Nombre_Insumo", "Target_Tipo", "Target_ID", "Target_Label", "Finca", "Unidad", "Cultivo", "Arbol", "Estado", "Notas"]:
+        if col not in out.columns:
+            out[col] = ""
+        out[col] = out[col].fillna("").astype(str)
+    return out
+
+
+def event_effective_date(row):
+    if pd.notna(row.get("Fecha_Programada")):
+        return row.get("Fecha_Programada")
+    return row.get("Fecha_Realizada")
+
+
+def event_status_class(status, effective_date=None):
+    s = str(status).strip().lower()
+    if "complet" in s:
+        return "event-completado"
+    if effective_date is not None and pd.notna(effective_date) and pd.to_datetime(effective_date).date() < date.today() and "complet" not in s:
+        return "event-vencido"
+    if "pend" in s:
+        return "event-pendiente"
+    return "event-no-empezado"
+
+
+def latest_control_status(events, target_id):
+    if events is None or events.empty or not target_id:
+        return None
+    subset = events[(events["Target_ID"].astype(str) == str(target_id)) & (events["Tipo_Evento"].str.lower() == "control fitosanitario")].copy()
+    if subset.empty:
+        return None
+    subset["_date"] = subset.apply(event_effective_date, axis=1)
+    subset = subset.sort_values("_date", na_position="last")
+    row = subset.iloc[-1]
+    return {"estado": row.get("Estado", ""), "insumo": row.get("Nombre_Insumo", ""), "fecha": row.get("_date")}
+
+
+def control_status_html(control):
+    if not control:
+        return '<div class="control-line">Control fitosanitario <span class="control-pill event-no-empezado">Sin evento</span></div>'
+    cls = event_status_class(control.get("estado"), control.get("fecha"))
+    insumo = control.get("insumo") or "Sin insumo"
+    fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else "Sin fecha"
+    return f'<div class="control-line">Control fitosanitario <span class="control-pill {cls}">{control.get("estado", "")}</span> · {insumo} · {fecha}</div>'
 
 def clean_view(df):
     out = pd.DataFrame()
@@ -382,9 +483,11 @@ def metric_card(label, value, note=""):
     )
 
 
-def crop_card(row, idx):
+def crop_card(row, idx, events=None):
     crop = row["Cultivo"]
     meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
+
+    control_html = control_status_html(latest_control_status(events, row.get("Siembra_ID")))
 
     if is_available_placeholder(row):
         st.markdown(
@@ -411,6 +514,7 @@ def crop_card(row, idx):
             <div class="info-line">{base_date_label(row)}</div>
             {days_html(row['Cosecha_Min'], 'Cosecha min')}
             {days_html(row['Cosecha_Max'], 'Cosecha max')}
+            {control_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -437,7 +541,7 @@ def sort_crops_for_display(crops_df):
     return tmp.sort_values(["_available_sort", "_ready_sort", "Cultivo"]).drop(columns=["_available_sort", "_ready_sort"])
 
 
-def bed_panel(unit_row, crops_df):
+def bed_panel(unit_row, crops_df, events=None):
     unidad = unit_row["Unidad"]
     status = unit_status(unit_row, crops_df)
     badge_class = STATUS_CLASS.get(status, "ok")
@@ -463,7 +567,7 @@ def bed_panel(unit_row, crops_df):
             cols = st.columns(cols_per_row)
             for col, (idx, row) in zip(cols, records[start:start + cols_per_row]):
                 with col:
-                    crop_card(row, idx)
+                    crop_card(row, idx, events)
 
 
 def app_week_number(d):
@@ -666,7 +770,8 @@ def health_class(value):
         return "health-atencion"
     return "health-bueno"
 
-def render_tree_card(row):
+def render_tree_card(row, events=None):
+    control_html = control_status_html(latest_control_status(events, row.get("Arbol_ID")))
     st.markdown(f"""
     <div class="tree-card">
         <div class="tree-row">
@@ -676,13 +781,13 @@ def render_tree_card(row):
                 <div class="tree-line">Estado fenológico <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{row['Estado_Fenologico']}</span></div>
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
                 <div class="tree-line">Estado sanitario <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {row['Estado_Sanitario']}</span></div>
+                {control_html}
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-def render_arboles_view():
-    trees = pd.DataFrame(TREE_DATA)
+def render_arboles_view(trees, events):
     c1, c2 = st.columns([1,1])
     with c1:
         finca_sel = st.selectbox("Finca", ["Todas"] + [f for f in ["Moravia","Frailes"] if f in trees["Finca"].unique()], key="tree_finca")
@@ -699,9 +804,85 @@ def render_arboles_view():
             cols = st.columns(4)
             for col, (_, row) in zip(cols, records[start:start+4]):
                 with col:
-                    render_tree_card(row)
+                    render_tree_card(row, events)
 
-df, units = load_data()
+
+def render_eventos_view(events, insumos):
+    c1, c2, c3 = st.columns([1.1, 1.1, 1.1])
+    with c1:
+        tipo_options = ["Todos"] + sorted([x for x in events["Tipo_Evento"].dropna().unique() if x])
+        tipo_sel = st.selectbox("Tipo de evento", tipo_options, key="evt_tipo")
+    with c2:
+        finca_options = ["Todas"] + sorted([x for x in events["Finca"].dropna().unique() if x])
+        finca_sel = st.selectbox("Finca", finca_options, key="evt_finca")
+    with c3:
+        estado_options = ["Todos"] + sorted([x for x in events["Estado"].dropna().unique() if x])
+        estado_sel = st.selectbox("Estado", estado_options, key="evt_estado")
+
+    filtered_events = events.copy()
+    if tipo_sel != "Todos":
+        filtered_events = filtered_events[filtered_events["Tipo_Evento"] == tipo_sel]
+    if finca_sel != "Todas":
+        filtered_events = filtered_events[filtered_events["Finca"] == finca_sel]
+    if estado_sel != "Todos":
+        filtered_events = filtered_events[filtered_events["Estado"] == estado_sel]
+
+    if filtered_events.empty:
+        st.markdown('<div class="calendar-toolbar"><div class="calendar-note">No hay eventos agrícolas para los filtros seleccionados.</div></div>', unsafe_allow_html=True)
+    else:
+        for tipo, group in filtered_events.groupby("Tipo_Evento", sort=False):
+            st.markdown(f'<div class="event-section-title">{tipo}</div>', unsafe_allow_html=True)
+            group = group.copy()
+            group["_date"] = group.apply(event_effective_date, axis=1)
+            group = group.sort_values(["_date", "Finca", "Target_Label"], na_position="last")
+            records = list(group.iterrows())
+            for start in range(0, len(records), 3):
+                cols = st.columns(3)
+                for col, (_, row) in zip(cols, records[start:start+3]):
+                    with col:
+                        effective = row.get("_date")
+                        cls = event_status_class(row.get("Estado"), effective)
+                        fecha_txt = fmt_date(effective) if pd.notna(effective) else "Sin fecha"
+                        insumo = row.get("Nombre_Insumo") or "Sin insumo"
+                        target = row.get("Target_Label") or row.get("Target_ID")
+                        html = f"""
+                        <div class="ag-event-card">
+                            <div class="ag-event-top">
+                                <div>
+                                    <div class="ag-event-title">{target}</div>
+                                    <div class="ag-event-meta">{row.get("Finca", "")} · {row.get("Target_Tipo", "")}</div>
+                                </div>
+                                <span class="ag-event-pill {cls}">{row.get("Estado", "")}</span>
+                            </div>
+                            <div class="ag-event-meta"><b>Insumo:</b> {insumo}</div>
+                            <div class="ag-event-meta"><b>Fecha:</b> {fecha_txt}</div>
+                            <div class="ag-event-meta">{row.get("Notas", "")}</div>
+                        </div>
+                        """
+                        st.markdown(html, unsafe_allow_html=True)
+
+    with st.expander("Catálogo de insumos"):
+        if insumos is None or insumos.empty:
+            st.write("Sin insumos registrados.")
+        else:
+            for tipo, group in insumos.groupby("Tipo", sort=False):
+                st.markdown(f"**{tipo}**")
+                records = list(group.iterrows())
+                for start in range(0, len(records), 3):
+                    cols = st.columns(3)
+                    for col, (_, row) in zip(cols, records[start:start+3]):
+                        with col:
+                            compra = "Compra requerida" if str(row.get("Compra_Requerida", "")).lower().startswith("s") else "Disponible"
+                            html = f"""
+                            <div class="insumo-card">
+                                <div class="insumo-name">{row.get("Nombre", "")}</div>
+                                <div class="insumo-meta">{row.get("Uso_Principal", "")}</div>
+                                <div class="insumo-meta"><b>{compra}</b></div>
+                            </div>
+                            """
+                            st.markdown(html, unsafe_allow_html=True)
+
+df, units, trees, eventos, insumos = load_data()
 
 st.markdown('<div class="app-title">Finca OS Dev</div>', unsafe_allow_html=True)
 
@@ -730,7 +911,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_camas, tab_arboles, tab_calendario = st.tabs(["🛏️ Camas", "🌳 Árboles", "📅 Calendario"])
+tab_camas, tab_arboles, tab_eventos, tab_calendario = st.tabs(["🛏️ Camas", "🌳 Árboles", "🧪 Eventos", "📅 Calendario"])
 
 with tab_camas:
     active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
@@ -766,10 +947,13 @@ with tab_camas:
             for col, (_, unit_row) in zip(cols, unit_records[start:start + 2]):
                 with col:
                     crops = filtered[filtered["Unidad"] == unit_row["Unidad"]]
-                    bed_panel(unit_row, crops)
+                    bed_panel(unit_row, crops, eventos)
 
 with tab_arboles:
-    render_arboles_view()
+    render_arboles_view(trees, eventos)
+
+with tab_eventos:
+    render_eventos_view(eventos, insumos)
 
 with tab_calendario:
     render_calendar_view(df)
