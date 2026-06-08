@@ -179,16 +179,17 @@ st.markdown(
     background: rgba(255,255,255,0.94);
     border: 2px solid rgba(255,255,255,0.9);
     border-radius: 16px;
-    padding: 11px;
-    min-height: 210px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+    padding: 10px;
+    min-height: 0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    margin-bottom: 12px;
 }
 .week-title {font-size:16px; font-weight:950; color:#0f3d25; margin-bottom:2px;}
-.week-range {font-size:11px; color:#64748b; font-weight:800; margin-bottom:12px;}
+.week-range {font-size:11px; color:#64748b; font-weight:800; margin-bottom:8px;}
 .event-card {
     border-radius: 12px;
-    padding: 8px 8px;
-    margin-bottom: 8px;
+    padding: 7px 8px;
+    margin-bottom: 6px;
     border: 1px solid #e5e7eb;
     background:#ffffff;
 }
@@ -196,13 +197,24 @@ st.markdown(
 .event-card.soon {background:#fffbeb; border:2px solid #fbbf24;}
 .event-card.future {background:#f8fafc; border:1px solid #cbd5e1;}
 .event-row {display:flex; gap:9px; align-items:flex-start;}
-.event-icon {font-size:22px; width:28px; text-align:center;}
+.event-icon {font-size:20px; width:26px; text-align:center;}
 .event-crop {font-weight:950; color:#0f172a; font-size:13px;}
 .event-meta {font-size:11px; color:#475569; margin-top:2px; font-weight:700;}
 .event-date {font-size:11px; margin-top:4px; font-weight:950;}
 .ready-text {color:#15803d;}
 .soon-text {color:#b45309;}
 .future-text {color:#2563eb;}
+.wip-card {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid rgba(255,255,255,0.85);
+    border-radius: 18px;
+    padding: 28px 24px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+    color:#0f172a;
+    font-weight:900;
+}
+.wip-title {font-size:24px; font-weight:950; color:#0f3d25; margin-bottom:8px;}
+.wip-text {font-size:15px; color:#475569; font-weight:700;}
 .no-events {color:#94a3b8; font-size:12px; font-weight:800; text-align:center; margin-top:12px;}
 </style>
 """,
@@ -479,7 +491,7 @@ def calendar_event_card(row):
 def render_calendar_view(all_df):
     today = date.today()
     month_options = []
-    for offset in range(-2, 7):
+    for offset in range(-6, 7):
         m = today.month + offset
         y = today.year
         while m < 1:
@@ -494,7 +506,7 @@ def render_calendar_view(all_df):
     default_label = f"{MONTHS_ES[today.month]} {today.year}"
 
     st.markdown('<div class="calendar-filter-panel">', unsafe_allow_html=True)
-    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1.4, 1.1, 1.1])
+    c1, c2, c3, c4 = st.columns([1.15, 1.15, 1.35, 1.25])
     with c1:
         selected_label = st.selectbox("Mes", labels, index=labels.index(default_label) if default_label in labels else 0, key="cal_mes")
     _, selected_year, selected_month = next(x for x in month_options if x[0] == selected_label)
@@ -505,6 +517,7 @@ def render_calendar_view(all_df):
         & (calendar_base["Estado_Unidad"] != "No activa")
         & calendar_base["Cosecha_Min"].notna()
     ].copy()
+    calendar_base["Cosecha_Date"] = calendar_base["Cosecha_Min"].dt.date
 
     with c2:
         fincas = ["Todas"] + [f for f in ["Moravia", "Frailes"] if f in set(calendar_base["Finca"].dropna().unique())]
@@ -520,73 +533,67 @@ def render_calendar_view(all_df):
         calendar_base = calendar_base[calendar_base["Unidad"] == cal_cama]
 
     with c4:
-        only_ready = st.checkbox("Solo cosechas disponibles", value=False, key="cal_only_ready")
-    with c5:
         only_soon = st.checkbox("Solo próximos 15 días", value=False, key="cal_only_soon")
     st.markdown('</div>', unsafe_allow_html=True)
 
     calendar_df = calendar_base.copy()
-    calendar_df["Cosecha_Date"] = calendar_df["Cosecha_Min"].dt.date
-
-    if only_ready or only_soon:
-        ready_mask = calendar_df["Cosecha_Date"] < today
+    month_mask = calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)
+    if only_soon:
         soon_mask = (calendar_df["Cosecha_Date"] >= today) & (calendar_df["Cosecha_Date"] <= today + pd.Timedelta(days=15))
-        selected_mask = False
-        if only_ready:
-            selected_mask = selected_mask | ready_mask
-        if only_soon:
-            selected_mask = selected_mask | soon_mask
-        calendar_df = calendar_df[selected_mask]
+        calendar_df = calendar_df[month_mask & soon_mask]
     else:
-        calendar_df = calendar_df[calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)]
+        # Valor por defecto: cosechas disponibles del mes seleccionado, usando Cosecha_Min.
+        ready_mask = calendar_df["Cosecha_Date"] < today
+        calendar_df = calendar_df[month_mask & ready_mask]
 
-    if calendar_df.empty:
-        month_df = calendar_df.copy()
+    if not calendar_df.empty:
+        calendar_df["Week_Num"] = calendar_df["Cosecha_Date"].apply(app_week_number)
+        week_nums = sorted(calendar_df["Week_Num"].unique().tolist())
     else:
-        month_df = calendar_df.copy()
-        month_df["Week_Num"] = month_df["Cosecha_Date"].apply(app_week_number)
+        week_nums = []
 
-    st.markdown(
-        f"""
-        <div class="calendar-toolbar">
-            <div class="calendar-title">Calendario · {selected_label}</div>
-            <div class="calendar-note">Las semanas usan secuencia anual: la semana del 1 de enero es Semana 1. Esta vista no usa contadores todavía.</div>
+    def build_event_html(row):
+        crop = row["Cultivo"]
+        meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
+        status_label, status_class = event_status(row)
+        date_class = "ready-text" if status_class == "ready" else "soon-text" if status_class == "soon" else "future-text"
+        return f"""
+        <div class="event-card {status_class}">
+            <div class="event-row">
+                <div class="event-icon">{meta['icon']}</div>
+                <div>
+                    <div class="event-crop">{crop}</div>
+                    <div class="event-meta">{row['Finca']} · {row['Unidad']}</div>
+                    <div class="event-date {date_class}">{status_label}: {fmt_date(row['Cosecha_Min'])}</div>
+                    <div class="event-meta">Máx: {fmt_date(row['Cosecha_Max'])}</div>
+                </div>
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if only_ready or only_soon:
-        if month_df.empty:
-            week_nums = []
-        else:
-            week_nums = sorted(month_df["Week_Num"].unique().tolist())
-    else:
-        week_nums = month_week_numbers(selected_year, selected_month)
+        """
 
     for start in range(0, len(week_nums), 4):
         cols = st.columns(4)
         for col, week_num in zip(cols, week_nums[start:start + 4]):
             with col:
                 week_start, week_end = week_range_for_number(selected_year, int(week_num))
-                events = month_df[month_df["Week_Num"] == week_num].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
+                events = calendar_df[calendar_df["Week_Num"] == week_num].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
+                events_html = "".join(build_event_html(row) for _, row in events.iterrows())
+                if not events_html:
+                    events_html = '<div class="no-events">Sin cosechas</div>'
                 st.markdown(
                     f"""
                     <div class="week-card">
                         <div class="week-title">Semana {int(week_num)}</div>
                         <div class="week-range">{week_start.strftime('%d %b')} – {week_end.strftime('%d %b')}</div>
+                        {events_html}
+                    </div>
                     """,
                     unsafe_allow_html=True,
                 )
-                if events.empty:
-                    st.markdown('<div class="no-events">Sin cosechas</div>', unsafe_allow_html=True)
-                else:
-                    for _, row in events.iterrows():
-                        calendar_event_card(row)
-                st.markdown("</div>", unsafe_allow_html=True)
 
     if len(week_nums) == 0:
-        st.markdown('<div class="calendar-toolbar"><div class="calendar-note">No hay cosechas para los filtros seleccionados.</div></div>', unsafe_allow_html=True)
+        msg = "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados." if only_soon else "No hay cosechas disponibles para los filtros seleccionados."
+        st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>', unsafe_allow_html=True)
 
 df, units = load_data()
 
@@ -617,7 +624,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_camas, tab_calendario = st.tabs(["🌱 Camas", "📅 Calendario"])
+tab_camas, tab_arboles, tab_calendario = st.tabs(["🛏️ Camas", "🌳 Árboles", "📅 Calendario"])
 
 with tab_camas:
     active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
@@ -654,6 +661,17 @@ with tab_camas:
                 with col:
                     crops = filtered[filtered["Unidad"] == unit_row["Unidad"]]
                     bed_panel(unit_row, crops)
+
+with tab_arboles:
+    st.markdown(
+        """
+        <div class="wip-card">
+            <div class="wip-title">🌳 Árboles</div>
+            <div class="wip-text">Trabajo en progreso. Esta vista se usará para consolidado por árbol, etapa actual y próximas acciones.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 with tab_calendario:
     render_calendar_view(df)
