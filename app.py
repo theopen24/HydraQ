@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import date, datetime, timedelta
 import calendar
+from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
@@ -583,18 +584,16 @@ def metric_card(label, value, note=""):
     )
 
 
+def html_block(markup):
+    st.markdown(dedent(str(markup)).strip(), unsafe_allow_html=True)
+
+
 def dashboard_metric_cards(cards):
-    html = '<div class="dashboard-grid">'
+    parts = ['<div class="dashboard-grid">']
     for label, value, note in cards:
-        html += f'''
-        <div class="dash-card">
-            <div class="dash-label">{label}</div>
-            <div class="dash-value">{value}</div>
-            <div class="dash-note">{note}</div>
-        </div>
-        '''
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+        parts.append(f'<div class="dash-card"><div class="dash-label">{label}</div><div class="dash-value">{value}</div><div class="dash-note">{note}</div></div>')
+    parts.append('</div>')
+    html_block(''.join(parts))
 
 
 def render_dashboard_view(filtered, filtered_units, events, trees):
@@ -641,14 +640,14 @@ def render_dashboard_view(filtered, filtered_units, events, trees):
 
     c1, c2 = st.columns([1,1])
     with c1:
-        st.markdown('''
+        html_block('''
         <div class="dash-panel">
             <div class="dash-panel-title">🌧️ Lluvias y clima</div>
             <div class="dash-line"><span class="dash-pill pill-blue">Moravia</span> Pendiente integrar lluvia real.</div>
             <div class="dash-line"><span class="dash-pill pill-blue">Frailes</span> Pendiente integrar lluvia real.</div>
             <div class="dash-line"><span class="dash-pill pill-yellow">Uso previsto</span> mover foliares, riego y controles según pronóstico.</div>
         </div>
-        ''', unsafe_allow_html=True)
+        ''')
     with c2:
         lines = []
         if len(overdue_events) > 0:
@@ -659,14 +658,14 @@ def render_dashboard_view(filtered, filtered_units, events, trees):
                 lines.append(f'<div class="dash-line"><span class="dash-pill pill-yellow">{fmt_date(r["_date"])}</span> {r.get("Tipo_Evento", "Evento")} · {r.get("Target_Label", "")}</div>')
         if not lines:
             lines.append('<div class="dash-line"><span class="dash-pill pill-green">Sin alertas</span> No hay eventos próximos en 15 días.</div>')
-        st.markdown(f'''
+        html_block(f'''
         <div class="dash-panel">
             <div class="dash-panel-title">⚠️ Eventos especiales</div>
             {''.join(lines)}
         </div>
-        ''', unsafe_allow_html=True)
+        ''')
 
-    st.markdown('<div class="dash-panel"><div class="dash-panel-title">📝 Notas rápidas</div><div class="dash-line">Captura temporal para ideas, observaciones o mensajes que luego GPT puede convertir en cambios de datos.</div></div>', unsafe_allow_html=True)
+    html_block('<div class="dash-panel"><div class="dash-panel-title">📝 Notas rápidas</div><div class="dash-line">Captura temporal para ideas, observaciones o mensajes que luego GPT puede convertir en cambios de datos.</div></div>')
     note = st.text_area("Nueva nota", placeholder="Ejemplo: En Frailes vi hojas con manchas en pepino. Programar control fitosanitario con Mistral.", height=90, key="quick_note")
     if note.strip():
         st.download_button("Descargar nota", data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
@@ -882,19 +881,18 @@ def render_calendar_view(all_df):
         meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
         status_label, status_class = event_status(row)
         date_class = "overdue-text" if status_class == "overdue" else "ready-text" if status_class == "available" else "soon-text" if status_class == "soon" else "future-text"
-        return f"""
-        <div class="event-card {status_class}">
-            <div class="event-row">
-                <div class="event-icon">{meta['icon']}</div>
-                <div>
-                    <div class="event-crop">{crop}</div>
-                    <div class="event-meta">{row['Finca']} · {row['Unidad']}</div>
-                    <div class="event-date {date_class}">{status_label}: {fmt_date(row['Cosecha_Min'])}</div>
-                    <div class="event-meta">Máx: {fmt_date(row['Cosecha_Max'])}</div>
-                </div>
-            </div>
-        </div>
-        """
+        return (
+            f'<div class="event-card {status_class}">'
+            f'<div class="event-row">'
+            f'<div class="event-icon">{meta["icon"]}</div>'
+            f'<div>'
+            f'<div class="event-crop">{crop}</div>'
+            f'<div class="event-meta">{row["Finca"]} · {row["Unidad"]}</div>'
+            f'<div class="event-date {date_class}">{status_label}: {fmt_date(row["Cosecha_Min"])}</div>'
+            f'<div class="event-meta">Máx: {fmt_date(row["Cosecha_Max"])}</div>'
+            f'</div></div></div>'
+        )
+
 
     for start in range(0, len(week_nums), 4):
         cols = st.columns(4)
@@ -905,20 +903,15 @@ def render_calendar_view(all_df):
                 events_html = "".join(build_event_html(row) for _, row in events.iterrows())
                 if not events_html:
                     events_html = '<div class="no-events">Sin cosechas</div>'
-                st.markdown(
-                    f"""
-                    <div class="week-card">
-                        <div class="week-title">Semana {int(week_num)}</div>
-                        <div class="week-range">{week_start.strftime('%d %b')} – {week_end.strftime('%d %b')}</div>
-                        {events_html}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                html_block(
+                    f'<div class="week-card"><div class="week-title">Semana {int(week_num)}</div>'
+                    f'<div class="week-range">{week_start.strftime("%d %b")} – {week_end.strftime("%d %b")}</div>'
+                    f'{events_html}</div>'
                 )
 
     if len(week_nums) == 0:
         msg = "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados." if only_soon else "No hay cultivos con cosecha mínima en el mes seleccionado."
-        st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>', unsafe_allow_html=True)
+        html_block(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>')
 
 
 TREE_DATA = [
