@@ -77,6 +77,16 @@ st.markdown(
     padding-bottom: 8px;
     border-bottom: 2px solid rgba(255,255,255,0.25);
 }
+/* Borde reforzado para que las camas se vean bien en Edge/AOC y Chrome/Samsung */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 2.5px solid rgba(255,255,255,0.82) !important;
+    border-radius: 20px !important;
+    background: rgba(255,255,255,0.10) !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    border-color: rgba(255,255,255,0.98) !important;
+}
 .bed-header {display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;}
 .bed-title {font-size: 20px; font-weight: 950; color: #ffffff; text-shadow:0 1px 4px rgba(0,0,0,0.35);}
 .badge {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900;}
@@ -133,6 +143,21 @@ st.markdown(
 .info-line {font-size: 13px; color:#475569; margin-top: 3px;}
 .info-line.past-harvest {color:#b91c1c; font-weight:950;}
 .empty-card {padding: 24px 10px; text-align:center; color:#6b7280; font-weight:800;}
+.hq-brand {
+    display:flex; align-items:center; gap:12px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 18px;
+    padding: 12px 12px; margin-bottom: 18px;
+}
+.hq-mark {
+    width: 42px; height: 42px; border-radius: 14px;
+    display:flex; align-items:center; justify-content:center;
+    background: #ecfccb; color:#14532d !important;
+    font-weight: 950; font-size: 16px; letter-spacing:-0.5px;
+}
+.hq-name {font-size:18px; font-weight:950; line-height:1; color:#ffffff !important;}
+.hq-sub {font-size:12px; font-weight:800; color:#bbf7d0 !important; margin-top:3px;}
 [data-testid="stSidebar"] {background: #0b2f1a;}
 [data-testid="stSidebar"] * {color: #ffffff !important;}
 [data-testid="stSidebar"] div[data-baseweb="select"] * {color: #0f172a !important;}
@@ -320,6 +345,16 @@ def unit_status(unit_row, group):
     return "Activa"
 
 
+def sort_crops_for_display(crops_df):
+    # Regla V12: cualquier espacio Disponible siempre va al final de la cama.
+    if crops_df is None or crops_df.empty:
+        return crops_df
+    tmp = crops_df.copy()
+    tmp["_available_sort"] = tmp.apply(lambda r: 1 if is_available_placeholder(r) else 0, axis=1)
+    tmp["_ready_sort"] = tmp["Cosecha_Disponible"].apply(lambda x: 0 if bool(x) else 1)
+    return tmp.sort_values(["_available_sort", "_ready_sort", "Cultivo"]).drop(columns=["_available_sort", "_ready_sort"])
+
+
 def bed_panel(unit_row, crops_df):
     unidad = unit_row["Unidad"]
     status = unit_status(unit_row, crops_df)
@@ -341,7 +376,7 @@ def bed_panel(unit_row, crops_df):
             st.markdown('<div class="empty-card">Sin cultivos activos</div>', unsafe_allow_html=True)
             return
         cols_per_row = 2 if len(crops_df) <= 4 else 3
-        records = list(crops_df.sort_values(["Visual_Status", "Cultivo"]).iterrows())
+        records = list(sort_crops_for_display(crops_df).iterrows())
         for start in range(0, len(records), cols_per_row):
             cols = st.columns(cols_per_row)
             for col, (idx, row) in zip(cols, records[start:start + cols_per_row]):
@@ -354,6 +389,18 @@ df, units = load_data()
 st.markdown('<div class="app-title">Finca OS Dev</div>', unsafe_allow_html=True)
 
 with st.sidebar:
+    st.markdown(
+        """
+        <div class="hq-brand">
+            <div class="hq-mark">HQ</div>
+            <div>
+                <div class="hq-name">Hydra Q</div>
+                <div class="hq-sub">FincaOS Dev</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.header("Filtros")
     st.caption(f"Datos: {DATA_FILE}")
     finca_options = [f for f in ["Moravia", "Frailes"] if f in set(units["Finca"].dropna().unique())] + [f for f in sorted(units["Finca"].dropna().unique()) if f not in ["Moravia", "Frailes"]]
