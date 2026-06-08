@@ -75,6 +75,38 @@ st.markdown(
 .metric-label {color:#31543d; font-size:12px; font-weight:900; margin-bottom:6px;}
 .metric-value {color:#0f3d25; font-size:24px; font-weight:950; line-height:1.05;}
 .metric-note {color:#64748b; font-size:11px; margin-top:5px;}
+.dashboard-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap:10px;
+    margin: 6px 0 14px 0;
+}
+.dash-card {
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(255,255,255,0.50);
+    border-radius: 14px;
+    padding: 10px 10px;
+    box-shadow: 0 5px 14px rgba(0,0,0,0.12);
+    min-height: 62px;
+}
+.dash-label {color:#31543d; font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.2px;}
+.dash-value {color:#0f3d25; font-size:20px; font-weight:950; line-height:1.05; margin-top:3px;}
+.dash-note {color:#64748b; font-size:10px; margin-top:4px; line-height:1.15;}
+.dash-panel {
+    background: rgba(255,255,255,0.94);
+    border-radius: 16px;
+    padding: 13px 14px;
+    border: 1px solid rgba(255,255,255,0.55);
+    box-shadow: 0 5px 16px rgba(0,0,0,0.12);
+    margin-bottom:12px;
+}
+.dash-panel-title {font-size:16px; font-weight:950; color:#0f3d25; margin-bottom:8px;}
+.dash-line {font-size:13px; color:#334155; margin:5px 0;}
+.dash-pill {display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:900; margin-right:5px;}
+.pill-green {background:#dcfce7; color:#166534;}
+.pill-yellow {background:#fef3c7; color:#92400e;}
+.pill-red {background:#fee2e2; color:#991b1b;}
+.pill-blue {background:#dbeafe; color:#1d4ed8;}
 .section-title {
     font-size: 28px;
     font-weight: 950;
@@ -551,6 +583,95 @@ def metric_card(label, value, note=""):
     )
 
 
+def dashboard_metric_cards(cards):
+    html = '<div class="dashboard-grid">'
+    for label, value, note in cards:
+        html += f'''
+        <div class="dash-card">
+            <div class="dash-label">{label}</div>
+            <div class="dash-value">{value}</div>
+            <div class="dash-note">{note}</div>
+        </div>
+        '''
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_dashboard_view(filtered, filtered_units, events, trees):
+    active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")].copy()
+    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
+    explicit_available = filtered[filtered["Cultivo"] == "Disponible"].copy()
+    errors = int((filtered["Visual_Status"] == "Dato faltante").sum())
+
+    next_harvest_value = "Sin fecha"
+    next_harvest_note = "No hay cosechas disponibles"
+    if not available_harvest.empty:
+        item = available_harvest.sort_values("Cosecha_Min").iloc[0]
+        next_harvest_value = fmt_date(item["Cosecha_Min"])
+        next_harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
+
+    pending_events = pd.DataFrame()
+    next_15_events = pd.DataFrame()
+    overdue_events = pd.DataFrame()
+    pending_controls = pd.DataFrame()
+    if events is not None and not events.empty:
+        pending_events = events[~events["Estado"].astype(str).str.lower().str.contains("complet", na=False)].copy()
+        if not pending_events.empty:
+            pending_events["_date"] = pending_events.apply(event_effective_date, axis=1)
+            dated = pending_events[pending_events["_date"].notna()].copy()
+            if not dated.empty:
+                dated["_date"] = pd.to_datetime(dated["_date"]).dt.date
+                today = date.today()
+                next_15_events = dated[(dated["_date"] >= today) & (dated["_date"] <= today + timedelta(days=15))]
+                overdue_events = dated[dated["_date"] < today]
+            pending_controls = pending_events[pending_events["Tipo_Evento"].astype(str).str.lower() == "control fitosanitario"]
+
+    active_trees = 0 if trees is None or trees.empty else len(trees)
+    cards = [
+        ("Cultivos", len(active_crops), "activos visibles"),
+        ("Camas", filtered_units["Unidad"].nunique(), "según filtros"),
+        ("Cosecha", next_harvest_value, next_harvest_note),
+        ("Cosechas disp.", len(available_harvest), "mínima en el pasado"),
+        ("Espacios", len(explicit_available), "disponibles"),
+        ("Errores", errors, "datos faltantes"),
+        ("Árboles", active_trees, "registrados"),
+        ("Eventos 15d", len(next_15_events), "pendientes próximos"),
+    ]
+    dashboard_metric_cards(cards)
+
+    c1, c2 = st.columns([1,1])
+    with c1:
+        st.markdown('''
+        <div class="dash-panel">
+            <div class="dash-panel-title">🌧️ Lluvias y clima</div>
+            <div class="dash-line"><span class="dash-pill pill-blue">Moravia</span> Pendiente integrar lluvia real.</div>
+            <div class="dash-line"><span class="dash-pill pill-blue">Frailes</span> Pendiente integrar lluvia real.</div>
+            <div class="dash-line"><span class="dash-pill pill-yellow">Uso previsto</span> mover foliares, riego y controles según pronóstico.</div>
+        </div>
+        ''', unsafe_allow_html=True)
+    with c2:
+        lines = []
+        if len(overdue_events) > 0:
+            lines.append(f'<div class="dash-line"><span class="dash-pill pill-red">Vencidos</span> {len(overdue_events)} eventos sin completar.</div>')
+        if len(next_15_events) > 0:
+            sample = next_15_events.sort_values("_date").head(3)
+            for _, r in sample.iterrows():
+                lines.append(f'<div class="dash-line"><span class="dash-pill pill-yellow">{fmt_date(r["_date"])}</span> {r.get("Tipo_Evento", "Evento")} · {r.get("Target_Label", "")}</div>')
+        if not lines:
+            lines.append('<div class="dash-line"><span class="dash-pill pill-green">Sin alertas</span> No hay eventos próximos en 15 días.</div>')
+        st.markdown(f'''
+        <div class="dash-panel">
+            <div class="dash-panel-title">⚠️ Eventos especiales</div>
+            {''.join(lines)}
+        </div>
+        ''', unsafe_allow_html=True)
+
+    st.markdown('<div class="dash-panel"><div class="dash-panel-title">📝 Notas rápidas</div><div class="dash-line">Captura temporal para ideas, observaciones o mensajes que luego GPT puede convertir en cambios de datos.</div></div>', unsafe_allow_html=True)
+    note = st.text_area("Nueva nota", placeholder="Ejemplo: En Frailes vi hojas con manchas en pepino. Programar control fitosanitario con Mistral.", height=90, key="quick_note")
+    if note.strip():
+        st.download_button("Descargar nota", data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
+
+
 def crop_card(row, idx, events=None):
     crop = row["Cultivo"]
     meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
@@ -986,34 +1107,12 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_camas, tab_arboles, tab_eventos, tab_calendario = st.tabs(["🛏️ Camas", "🌳 Árboles", "🧪 Eventos", "📅 Calendario"])
+tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_calendario = st.tabs(["📊 Dashboard", "🛏️ Camas", "🌳 Árboles", "🧪 Eventos", "📅 Calendario"])
+
+with tab_dashboard:
+    render_dashboard_view(filtered, filtered_units, eventos, trees)
 
 with tab_camas:
-    active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")]
-    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
-    explicit_available = filtered[filtered["Cultivo"] == "Disponible"]
-
-    harvest_date = "Sin disponible"
-    harvest_note = ""
-    if not available_harvest.empty:
-        item = available_harvest.sort_values("Cosecha_Min").iloc[0]
-        harvest_date = fmt_date(item["Cosecha_Min"])
-        harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
-
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    with m1:
-        metric_card("Cultivos activos", len(active_crops), "sin contar espacios disponibles")
-    with m2:
-        metric_card("Camas visibles", filtered_units["Unidad"].nunique(), "según filtros")
-    with m3:
-        metric_card("Cosecha Disponible", harvest_date, harvest_note)
-    with m4:
-        metric_card("Cosechas disponibles", len(available_harvest), "cosecha mínima en el pasado")
-    with m5:
-        metric_card("Espacios disponibles", len(explicit_available), "oportunidad de siembra")
-    with m6:
-        metric_card("Errores de datos", int((filtered["Visual_Status"] == "Dato faltante").sum()), "falta información")
-
     for finca, unit_group in filtered_units.groupby("Finca", sort=False):
         st.markdown(f'<div class="section-title">📍 {finca}</div>', unsafe_allow_html=True)
         unit_records = list(unit_group.sort_values("Unidad").iterrows())
