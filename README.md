@@ -1,8 +1,9 @@
-# FincaOS Streamlit MVP
+# Finca OS Dev
 
-Archivos activos:
-- app.py
-- requirements.txt
-- FincaOS_Data.xlsx
+Archivos activos para Streamlit:
 
-Esta versión elimina referencias a Excels anteriores. La app solo carga FincaOS_Data.xlsx.
+- `app.py`
+- `FincaOS_Data.xlsx`
+- `requirements.txt`
+
+Subir estos archivos al repositorio de GitHub y hacer commit. Streamlit debería redeployar automáticamente.
