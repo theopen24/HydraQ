@@ -5,16 +5,13 @@ from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
+import gspread
 
 st.set_page_config(page_title="Finca OS Dev", layout="wide", page_icon="🌱")
 
-DATA_FILE = "FincaOS_Data.xlsx"
+SPREADSHEET_ID = "1ixV756fBEQPzMck3kNuG24X2JJkgnauXE5IXAIAGwR8"
 BASE_DIR = Path(__file__).parent
-FILE_PATH = BASE_DIR / DATA_FILE
 LOGO_FILE = BASE_DIR / "hydraq_logo.png"
-if not FILE_PATH.exists():
-    st.error(f"No se encontró el archivo de datos requerido: {DATA_FILE}")
-    st.stop()
 
 CROP_META = {
     "Disponible": {"icon": "➕", "class": "available"},
@@ -342,34 +339,61 @@ def visual_status(row):
     return "Activa"
 
 
-def load_data():
-    xl = pd.ExcelFile(FILE_PATH)
-    fincas = pd.read_excel(FILE_PATH, sheet_name="Fincas")
-    unidades = pd.read_excel(FILE_PATH, sheet_name="Unidades")
+def _get_gsheet_client():
+    try:
+        creds = dict(st.secrets["gcp_service_account"])
+    except Exception:
+        st.error("Faltan credenciales en Streamlit Secrets: gcp_service_account")
+        st.stop()
 
-    if "VistaCultivos" in xl.sheet_names:
-        df = pd.read_excel(FILE_PATH, sheet_name="VistaCultivos")
+    if "private_key" in creds and isinstance(creds["private_key"], str):
+        creds["private_key"] = creds["private_key"].replace("\\n", "\n")
+
+    return gspread.service_account_from_dict(creds)
+
+
+def _read_sheet(workbook, sheet_name, empty_columns=None):
+    try:
+        ws = workbook.worksheet(sheet_name)
+        rows = ws.get_all_records()
+        return pd.DataFrame(rows)
+    except gspread.WorksheetNotFound:
+        return pd.DataFrame(columns=empty_columns or [])
+
+
+@st.cache_data(ttl=300, show_spinner="Cargando datos desde Google Sheets...")
+def load_data():
+    client = _get_gsheet_client()
+    workbook = client.open_by_key(SPREADSHEET_ID)
+    sheet_names = [ws.title for ws in workbook.worksheets()]
+
+    fincas = _read_sheet(workbook, "Fincas")
+    unidades = _read_sheet(workbook, "Unidades")
+
+    if "VistaCultivos" in sheet_names:
+        df = _read_sheet(workbook, "VistaCultivos")
     else:
-        cultivos = pd.read_excel(FILE_PATH, sheet_name="CatalogoCultivos")
-        siembras = pd.read_excel(FILE_PATH, sheet_name="CultivosSembrados")
+        cultivos = _read_sheet(workbook, "CatalogoCultivos")
+        siembras = _read_sheet(workbook, "CultivosSembrados")
         df = siembras.merge(fincas, on="Finca_ID", how="left")
         df = df.merge(unidades, on=["Unidad_ID", "Finca_ID"], how="left")
         df = df.merge(cultivos, on="Cultivo_ID", how="left")
 
-    if "Arboles" in xl.sheet_names:
-        arboles = pd.read_excel(FILE_PATH, sheet_name="Arboles")
-    else:
-        arboles = pd.DataFrame(TREE_DATA)
+    arboles = _read_sheet(workbook, "Arboles") if "Arboles" in sheet_names else pd.DataFrame(TREE_DATA)
 
-    if "EventosAgricolas" in xl.sheet_names:
-        eventos = pd.read_excel(FILE_PATH, sheet_name="EventosAgricolas")
-    else:
-        eventos = pd.DataFrame(columns=["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID","Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada","Fecha_Realizada","Estado","Notas"])
+    eventos = _read_sheet(
+        workbook,
+        "EventosAgricolas",
+        ["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID",
+         "Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada",
+         "Fecha_Realizada","Estado","Notas"]
+    )
 
-    if "Insumos" in xl.sheet_names:
-        insumos = pd.read_excel(FILE_PATH, sheet_name="Insumos")
-    else:
-        insumos = pd.DataFrame(columns=["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"])
+    insumos = _read_sheet(
+        workbook,
+        "Insumos",
+        ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"]
+    )
 
     return clean_view(df), clean_units(unidades, fincas), clean_trees(arboles), clean_events(eventos), insumos
 
