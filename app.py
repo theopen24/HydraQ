@@ -5,7 +5,6 @@ from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
-import gspread
 
 st.set_page_config(page_title="Finca OS Dev", layout="wide", page_icon="🌱")
 
@@ -339,50 +338,53 @@ def visual_status(row):
     return "Activa"
 
 
-def _get_gsheet_client():
+def _sheet_csv_url(sheet_name):
+    from urllib.parse import quote
+    return (
+        f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq"
+        f"?tqx=out:csv&sheet={quote(sheet_name)}"
+    )
+
+
+def _read_sheet(sheet_name, empty_columns=None):
     try:
-        creds = dict(st.secrets["gcp_service_account"])
-    except Exception:
-        st.error("Faltan credenciales en Streamlit Secrets: gcp_service_account")
+        return pd.read_csv(_sheet_csv_url(sheet_name))
+    except Exception as exc:
+        # En la opción A, la hoja debe estar compartida como: cualquiera con el enlace puede ver.
+        # Si una pestaña opcional no existe, devolvemos un DataFrame vacío para no romper la app.
+        if empty_columns is not None:
+            return pd.DataFrame(columns=empty_columns)
+        st.error(
+            f"No pude leer la pestaña '{sheet_name}' desde Google Sheets. "
+            "Revisá que la hoja esté compartida como 'Cualquier persona con el enlace puede ver' "
+            "y que el nombre de la pestaña sea correcto."
+        )
+        st.caption(str(exc))
         st.stop()
 
-    if "private_key" in creds and isinstance(creds["private_key"], str):
-        creds["private_key"] = creds["private_key"].replace("\\n", "\n")
 
-    return gspread.service_account_from_dict(creds)
-
-
-def _read_sheet(workbook, sheet_name, empty_columns=None):
-    try:
-        ws = workbook.worksheet(sheet_name)
-        rows = ws.get_all_records()
-        return pd.DataFrame(rows)
-    except gspread.WorksheetNotFound:
-        return pd.DataFrame(columns=empty_columns or [])
-
-
-@st.cache_data(ttl=300, show_spinner="Cargando datos desde Google Sheets...")
+@st.cache_data(ttl=120, show_spinner="Cargando datos desde Google Sheets...")
 def load_data():
-    client = _get_gsheet_client()
-    workbook = client.open_by_key(SPREADSHEET_ID)
-    sheet_names = [ws.title for ws in workbook.worksheets()]
+    fincas = _read_sheet("Fincas")
+    unidades = _read_sheet("Unidades")
 
-    fincas = _read_sheet(workbook, "Fincas")
-    unidades = _read_sheet(workbook, "Unidades")
-
-    if "VistaCultivos" in sheet_names:
-        df = _read_sheet(workbook, "VistaCultivos")
-    else:
-        cultivos = _read_sheet(workbook, "CatalogoCultivos")
-        siembras = _read_sheet(workbook, "CultivosSembrados")
+    # Preferimos VistaCultivos si existe. Si no existe, armamos la vista desde las tablas base.
+    try:
+        df = _read_sheet("VistaCultivos", [])
+        if df.empty:
+            raise ValueError("VistaCultivos vacía")
+    except Exception:
+        cultivos = _read_sheet("CatalogoCultivos")
+        siembras = _read_sheet("CultivosSembrados")
         df = siembras.merge(fincas, on="Finca_ID", how="left")
         df = df.merge(unidades, on=["Unidad_ID", "Finca_ID"], how="left")
         df = df.merge(cultivos, on="Cultivo_ID", how="left")
 
-    arboles = _read_sheet(workbook, "Arboles") if "Arboles" in sheet_names else pd.DataFrame(TREE_DATA)
+    arboles = _read_sheet("Arboles", ["Arbol_ID","Finca","Arbol","Icono","Estado_Fenologico","Trasplante","Estado_Sanitario","Evento_Agricola"])
+    if arboles.empty:
+        arboles = pd.DataFrame(TREE_DATA)
 
     eventos = _read_sheet(
-        workbook,
         "EventosAgricolas",
         ["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID",
          "Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada",
@@ -390,7 +392,6 @@ def load_data():
     )
 
     insumos = _read_sheet(
-        workbook,
         "Insumos",
         ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"]
     )
