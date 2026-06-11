@@ -1,11 +1,23 @@
-# FincaOS - Google Sheets público
+# FincaOS - Google Sheets Public Version
 
-Esta versión lee los datos desde Google Sheets usando URL CSV pública. No requiere Service Account, Secrets, gspread ni archivo Excel en GitHub.
+Esta versión lee datos directamente desde Google Sheets usando URL CSV pública.
 
-Archivos necesarios en el repo:
+## Archivos requeridos en GitHub
 - app.py
 - requirements.txt
 - README.md
-- hydraq_logo.png (opcional, si la app lo usa)
 
-La hoja de Google Sheets debe estar compartida como: cualquier persona con el enlace puede ver.
+## Importante
+El Google Sheet debe estar compartido como:
+Cualquier persona con el enlace → Lector
+
+## Verificación en app.py
+Debe existir:
+SPREADSHEET_ID = "1ixV756fBEQPzMck3kNuG24X2JJkgnauXE5IXAIAGwR8"
+
+No debe existir:
+- FILE_PATH
+- pd.ExcelFile
+- FincaOS_Data.xlsx
+- gspread
+- google-auth
