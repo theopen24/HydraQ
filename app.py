@@ -50,6 +50,288 @@ MONTHS_ES = {
     7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
 }
 
+
+MONTHS_EN = {
+    1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+    7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
+}
+
+LANG_LABELS = {"Español": "es", "English": "en"}
+
+UI_TEXT = {
+    "es": {
+        "app_title": "Finca OS Dev",
+        "filters": "Filtros",
+        "language": "Idioma",
+        "data_source": "Datos: Google Sheets",
+        "farm": "Finca",
+        "bed": "Cama",
+        "crop": "Cultivo",
+        "visual_status": "Estado visual",
+        "show_detail_table": "Mostrar tabla detalle",
+        "dashboard": "Dashboard",
+        "beds": "Camas",
+        "trees": "Árboles",
+        "events": "Eventos",
+        "calendar": "Calendario",
+        "account": "Cuenta",
+        "date_none": "Sin fecha",
+        "date_base_none": "Sin fecha base",
+        "transplant": "Trasplante",
+        "planting": "Siembra",
+        "status": "Estado",
+        "quantity": "Cantidad",
+        "harvest_min": "Cosecha min",
+        "harvest_max": "Cosecha max",
+        "harvest_today": "hoy",
+        "in_days": "en {days} días",
+        "days_ago": "hace {days} días",
+        "active_visible": "activos visibles",
+        "by_filters": "según filtros",
+        "harvest": "Cosecha",
+        "available_harvests_short": "Cosechas disp.",
+        "no_available_harvest": "No hay cosechas disponibles",
+        "min_in_past": "mínima en el pasado",
+        "spaces": "Espacios",
+        "available_plural": "disponibles",
+        "errors": "Errores",
+        "missing_data": "datos faltantes",
+        "registered": "registrados",
+        "events_15d": "Eventos 15d",
+        "pending_next": "pendientes próximos",
+        "rain_weather": "🌧️ Lluvias y clima",
+        "pending_real_rain": "Pendiente integrar lluvia real.",
+        "intended_use": "Uso previsto",
+        "weather_use": "mover foliares, riego y controles según pronóstico.",
+        "overdue": "Vencidos",
+        "events_not_done": "eventos sin completar.",
+        "no_alerts": "Sin alertas",
+        "no_events_15": "No hay eventos próximos en 15 días.",
+        "special_events": "⚠️ Eventos especiales",
+        "quick_notes": "📝 Notas rápidas",
+        "quick_notes_help": "Captura temporal para ideas, observaciones o mensajes que luego GPT puede convertir en cambios de datos.",
+        "new_note": "Nueva nota",
+        "note_placeholder": "Ejemplo: En Frailes vi hojas con manchas en pepino. Programar control fitosanitario con Mistral.",
+        "download_note": "Descargar nota",
+        "available_space": "Espacio disponible",
+        "no_active_crops": "Sin cultivos activos",
+        "max_overdue": "Cosecha máxima vencida",
+        "harvest_available": "Cosecha disponible",
+        "upcoming_harvest": "Próxima cosecha",
+        "future_harvest": "Cosecha futura",
+        "month": "Mes",
+        "only_next_15": "Solo próximos 15 días",
+        "week": "Semana",
+        "no_upcoming_15": "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados.",
+        "no_min_month": "No hay cultivos con cosecha mínima en el mes seleccionado.",
+        "event_type": "Tipo de evento",
+        "all_f": "Todas",
+        "all_m": "Todos",
+        "no_events_filters": "No hay eventos agrícolas para los filtros seleccionados.",
+        "input": "Insumo",
+        "date": "Fecha",
+        "no_input": "Sin insumo",
+        "input_catalog": "Catálogo de insumos",
+        "no_inputs": "Sin insumos registrados.",
+        "purchase_required": "Compra requerida",
+        "available_stock": "Disponible",
+        "guide_qty": "Cantidad guía",
+        "timing": "Momento",
+        "frequency": "Frecuencia",
+        "no_rule": "Sin regla",
+        "according_criteria": "Según criterio",
+        "according_state": "Según estado",
+        "account_profile": "Perfil y configuración general de FincaOS",
+        "user": "Usuario",
+        "name": "Nombre",
+        "email": "Correo",
+        "not_configured": "no configurado",
+        "access_permissions": "Permisos de acceso",
+        "access_future": "Módulo reservado para administrar accesos. No desarrollado en esta versión.",
+        "future_work": "Trabajo futuro",
+        "version": "Versión",
+        "developer_version": "Developer Version",
+        "date_label": "Fecha",
+        "developed_with": "Desarrollado con",
+        "plugins": "🔌 PlugIns",
+        "plugins_text": "Espacio reservado para integraciones futuras: clima, lluvia, GPT Actions y Google Sheets.",
+        "detail_title": "Detalle de datos",
+        "health_status": "Estado sanitario",
+        "phenology": "Estado fenológico",
+        "last_control": "Último control",
+        "next_abono_no_history": "Próximo abono: sin historial para calcular frecuencia.",
+        "next_abono_no_soil": "Próximo abono: sin abonada de tierra registrada.",
+        "last_abono": "Último abono",
+        "next_abono_suggested": "Próximo abono sugerido",
+        "guide_quantity": "Cantidad guía",
+        "history_year": "Historial año"
+    },
+    "en": {
+        "app_title": "Finca OS Dev",
+        "filters": "Filters",
+        "language": "Language",
+        "data_source": "Data: Google Sheets",
+        "farm": "Farm",
+        "bed": "Bed",
+        "crop": "Crop",
+        "visual_status": "Visual status",
+        "show_detail_table": "Show detail table",
+        "dashboard": "Dashboard",
+        "beds": "Beds",
+        "trees": "Trees",
+        "events": "Events",
+        "calendar": "Calendar",
+        "account": "Account",
+        "date_none": "No date",
+        "date_base_none": "No base date",
+        "transplant": "Transplant",
+        "planting": "Planting",
+        "status": "Status",
+        "quantity": "Quantity",
+        "harvest_min": "Harvest min",
+        "harvest_max": "Harvest max",
+        "harvest_today": "today",
+        "in_days": "in {days} days",
+        "days_ago": "{days} days ago",
+        "active_visible": "visible active",
+        "by_filters": "by filters",
+        "harvest": "Harvest",
+        "available_harvests_short": "Harvests avail.",
+        "no_available_harvest": "No harvests available",
+        "min_in_past": "minimum date in the past",
+        "spaces": "Spaces",
+        "available_plural": "available",
+        "errors": "Errors",
+        "missing_data": "missing data",
+        "registered": "registered",
+        "events_15d": "Events 15d",
+        "pending_next": "upcoming pending",
+        "rain_weather": "🌧️ Rain and weather",
+        "pending_real_rain": "Real rainfall integration pending.",
+        "intended_use": "Planned use",
+        "weather_use": "move foliar sprays, irrigation and controls based on forecast.",
+        "overdue": "Overdue",
+        "events_not_done": "events not completed.",
+        "no_alerts": "No alerts",
+        "no_events_15": "No upcoming events in 15 days.",
+        "special_events": "⚠️ Special events",
+        "quick_notes": "📝 Quick notes",
+        "quick_notes_help": "Temporary capture for ideas, observations or messages that GPT can later convert into data changes.",
+        "new_note": "New note",
+        "note_placeholder": "Example: In Frailes I saw spotted leaves on cucumber. Schedule phytosanitary control with Mistral.",
+        "download_note": "Download note",
+        "available_space": "Available space",
+        "no_active_crops": "No active crops",
+        "max_overdue": "Maximum harvest overdue",
+        "harvest_available": "Harvest available",
+        "upcoming_harvest": "Upcoming harvest",
+        "future_harvest": "Future harvest",
+        "month": "Month",
+        "only_next_15": "Only next 15 days",
+        "week": "Week",
+        "no_upcoming_15": "No upcoming harvests in the next 15 days for the selected filters.",
+        "no_min_month": "No crops with minimum harvest date in the selected month.",
+        "event_type": "Event type",
+        "all_f": "All",
+        "all_m": "All",
+        "no_events_filters": "No agricultural events for the selected filters.",
+        "input": "Input",
+        "date": "Date",
+        "no_input": "No input",
+        "input_catalog": "Input catalog",
+        "no_inputs": "No inputs recorded.",
+        "purchase_required": "Purchase required",
+        "available_stock": "Available",
+        "guide_qty": "Guide quantity",
+        "timing": "Timing",
+        "frequency": "Frequency",
+        "no_rule": "No rule",
+        "according_criteria": "By criteria",
+        "according_state": "By stage",
+        "account_profile": "Profile and general FincaOS settings",
+        "user": "User",
+        "name": "Name",
+        "email": "Email",
+        "not_configured": "not configured",
+        "access_permissions": "Access permissions",
+        "access_future": "Reserved module for access management. Not developed in this version.",
+        "future_work": "Future work",
+        "version": "Version",
+        "developer_version": "Developer Version",
+        "date_label": "Date",
+        "developed_with": "Developed with",
+        "plugins": "🔌 Plugins",
+        "plugins_text": "Reserved space for future integrations: weather, rainfall, GPT Actions and Google Sheets.",
+        "detail_title": "Data detail",
+        "health_status": "Health status",
+        "phenology": "Phenological stage",
+        "last_control": "Last control",
+        "next_abono_no_history": "Next soil fertilization: no history to calculate frequency.",
+        "next_abono_no_soil": "Next soil fertilization: no soil fertilization recorded.",
+        "last_abono": "Last fertilization",
+        "next_abono_suggested": "Suggested next fertilization",
+        "guide_quantity": "Guide quantity",
+        "history_year": "Year history"
+    }
+}
+
+VALUE_TEXT = {
+    "en": {
+        "Activa": "Active",
+        "No activa": "Not active",
+        "Dato faltante": "Missing data",
+        "Disponible": "Available",
+        "Corte": "Cutting stage",
+        "Completado": "Completed",
+        "Programado": "Scheduled",
+        "Pendiente": "Pending",
+        "Realizado": "Completed",
+        "Control fitosanitario": "Pest control",
+        "Abono tierra": "Soil fertilization",
+        "Abono foliar": "Foliar feeding",
+        "Poda": "Pruning",
+        "Cosecha": "Harvest",
+        "Siembra": "Planting",
+        "Trasplante": "Transplant",
+        "Riego": "Irrigation",
+        "Mantenimiento de riego": "Irrigation maintenance",
+        "Enmienda": "Soil amendment",
+        "Amarre": "Tying",
+        "Arqueo de ramas": "Branch bending",
+        "Estrés hídrico": "Water stress",
+        "Sin estado": "No status",
+        "Floración": "Flowering",
+        "Cuajado": "Fruit set",
+        "Llenado": "Fruit filling",
+        "Vegetativo": "Vegetative",
+        "Sano": "Healthy",
+        "Observación": "Observation"
+    },
+    "es": {}
+}
+
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "es"
+
+
+def lang_code():
+    return st.session_state.get("lang", "es")
+
+
+def t(key):
+    return UI_TEXT.get(lang_code(), UI_TEXT["es"]).get(key, UI_TEXT["es"].get(key, key))
+
+
+def tv(value):
+    if value is None or pd.isna(value):
+        return ""
+    text = str(value)
+    return VALUE_TEXT.get(lang_code(), {}).get(text, text)
+
+
+def month_name(month_number):
+    return (MONTHS_EN if lang_code() == "en" else MONTHS_ES).get(month_number, str(month_number))
+
 st.markdown(
     """
 <style>
@@ -468,11 +750,11 @@ def latest_control_status(events, target_id):
 
 def control_status_html(control):
     if not control:
-        return '<div class="control-line">Control fitosanitario <span class="control-pill event-no-empezado">Sin evento</span></div>'
+        return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill event-no-empezado">{t("no_alerts")}</span></div>'
     cls = event_status_class(control.get("estado"), control.get("fecha"))
-    insumo = control.get("insumo") or "Sin insumo"
-    fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else "Sin fecha"
-    return f'<div class="control-line">Control fitosanitario <span class="control-pill {cls}">{control.get("estado", "")}</span> · {insumo} · {fecha}</div>'
+    insumo = control.get("insumo") or t("no_input")
+    fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else t("date_none")
+    return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill {cls}">{tv(control.get("estado", ""))}</span> · {insumo} · {fecha}</div>'
 
 
 
@@ -494,11 +776,11 @@ def history_summary_html(events, target_id):
     year = date.today().year
     subset = completed_events_for_target(events, target_id, year)
     if subset.empty:
-        return '<div class="history-line">Historial año: <span class="history-pill">Sin eventos completados</span></div>'
-    subset["_key"] = subset["Tipo_Evento"].fillna("") + ": " + subset["Nombre_Insumo"].fillna("Sin insumo")
+        return f'<div class="history-line">{t("history_year")}: <span class="history-pill">{t("no_alerts")}</span></div>'
+    subset["_key"] = subset["Tipo_Evento"].fillna("").apply(tv) + ": " + subset["Nombre_Insumo"].fillna(t("no_input"))
     counts = subset.groupby("_key").size().sort_values(ascending=False)
     pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
-    return f'<div class="history-line">Historial año: {pills}</div>'
+    return f'<div class="history-line">{t("history_year")}: {pills}</div>'
 
 
 def insumo_metadata(insumos, insumo_id=None, nombre=None):
@@ -521,26 +803,26 @@ def insumo_metadata(insumos, insumo_id=None, nombre=None):
 
 def next_soil_abono_html(events, insumos, target_id, estado_fenologico=""):
     if events is None or events.empty or not target_id:
-        return '<div class="next-abono">Próximo abono: sin historial para calcular frecuencia.</div>'
+        return f'<div class="next-abono">{t("next_abono_no_history")}</div>'
     subset = completed_events_for_target(events, target_id)
     subset = subset[subset["Tipo_Evento"].astype(str).str.lower() == "abono tierra"] if not subset.empty else subset
     if subset.empty:
-        return '<div class="next-abono">Próximo abono: sin abonada de tierra registrada.</div>'
+        return f'<div class="next-abono">{t("next_abono_no_soil")}</div>'
     subset = subset.sort_values("_date")
     last = subset.iloc[-1]
     meta = insumo_metadata(insumos, last.get("ID_Insumo"), last.get("Nombre_Insumo"))
     freq = pd.to_numeric(meta.get("Frecuencia_Dias", None), errors="coerce")
     insumo = last.get("Nombre_Insumo") or meta.get("Nombre") or "Abono tierra"
     last_date = pd.to_datetime(last.get("_date")).date()
-    cantidad = meta.get("Cantidad_Guia", "") or "Según criterio"
-    momento = meta.get("Momento_Aplicacion", "") or "Según estado del árbol"
+    cantidad = meta.get("Cantidad_Guia", "") or t("according_criteria")
+    momento = meta.get("Momento_Aplicacion", "") or t("according_state")
     if pd.isna(freq) or float(freq) <= 0:
-        return f'<div class="next-abono">Último abono: {insumo} · {fmt_date(last_date)} · Cantidad: {cantidad}</div>'
+        return f'<div class="next-abono">{t("last_abono")}: {insumo} · {fmt_date(last_date)} · {t("guide_quantity")}: {cantidad}</div>'
     next_date = last_date + timedelta(days=int(freq))
     days = (next_date - date.today()).days
     cls = "next-abono overdue" if days <= 0 else "next-abono"
-    timing = "vencido" if days < 0 else "hoy" if days == 0 else f"en {days} días"
-    return f'<div class="{cls}">Próximo abono sugerido: {insumo} · {fmt_date(next_date)} ({timing})<br>Cantidad guía: {cantidad}<br>Momento: {momento}</div>'
+    timing = t("overdue").lower() if days < 0 else t("harvest_today") if days == 0 else t("in_days").format(days=days)
+    return f'<div class="{cls}">{t("next_abono_suggested")}: {insumo} · {fmt_date(next_date)} ({timing})<br>{t("guide_quantity")}: {cantidad}<br>{t("timing")}: {momento}</div>'
 
 def clean_view(df):
     out = pd.DataFrame()
@@ -568,27 +850,27 @@ def clean_view(df):
 
 def fmt_date(value):
     if pd.isna(value):
-        return "Sin fecha"
+        return t("date_none")
     return pd.to_datetime(value).strftime("%d %b %Y")
 
 
 def base_date_label(row):
     if pd.notna(row["Fecha_Trasplante"]):
-        return f"Trasplante: {fmt_date(row['Fecha_Trasplante'])}"
+        return f"{t('transplant')}: {fmt_date(row['Fecha_Trasplante'])}"
     if pd.notna(row["Fecha_Siembra"]):
-        return f"Siembra: {fmt_date(row['Fecha_Siembra'])}"
-    return "Sin fecha base"
+        return f"{t('planting')}: {fmt_date(row['Fecha_Siembra'])}"
+    return t("date_base_none")
 
 
 def days_html(value, prefix):
     if pd.isna(value):
-        return f'<div class="info-line">{prefix}: Sin fecha</div>'
+        return f'<div class="info-line">{prefix}: {t("date_none")}</div>'
     days = (pd.to_datetime(value).date() - date.today()).days
     if days > 0:
-        return f'<div class="info-line">{prefix}: en {days} días</div>'
+        return f'<div class="info-line">{prefix}: {t("in_days").format(days=days)}</div>'
     if days == 0:
-        return f'<div class="info-line past-harvest"><b>{prefix}: hoy</b></div>'
-    return f'<div class="info-line past-harvest"><b>{prefix}: hace {abs(days)} días</b></div>'
+        return f'<div class="info-line past-harvest"><b>{prefix}: {t("harvest_today")}</b></div>'
+    return f'<div class="info-line past-harvest"><b>{prefix}: {t("days_ago").format(days=abs(days))}</b></div>'
 
 
 def display_state(row):
@@ -628,8 +910,8 @@ def render_dashboard_view(filtered, filtered_units, events, trees):
     explicit_available = filtered[filtered["Cultivo"] == "Disponible"].copy()
     errors = int((filtered["Visual_Status"] == "Dato faltante").sum())
 
-    next_harvest_value = "Sin fecha"
-    next_harvest_note = "No hay cosechas disponibles"
+    next_harvest_value = t("date_none")
+    next_harvest_note = t("no_available_harvest")
     if not available_harvest.empty:
         item = available_harvest.sort_values("Cosecha_Min").iloc[0]
         next_harvest_value = fmt_date(item["Cosecha_Min"])
@@ -653,48 +935,48 @@ def render_dashboard_view(filtered, filtered_units, events, trees):
 
     active_trees = 0 if trees is None or trees.empty else len(trees)
     cards = [
-        ("Cultivos", len(active_crops), "activos visibles"),
-        ("Camas", filtered_units["Unidad"].nunique(), "según filtros"),
-        ("Cosecha", next_harvest_value, next_harvest_note),
-        ("Cosechas disp.", len(available_harvest), "mínima en el pasado"),
-        ("Espacios", len(explicit_available), "disponibles"),
-        ("Errores", errors, "datos faltantes"),
-        ("Árboles", active_trees, "registrados"),
-        ("Eventos 15d", len(next_15_events), "pendientes próximos"),
+        (t("crops"), len(active_crops), t("active_visible")),
+        (t("beds"), filtered_units["Unidad"].nunique(), t("by_filters")),
+        (t("harvest"), next_harvest_value, next_harvest_note),
+        (t("available_harvests_short"), len(available_harvest), t("min_in_past")),
+        (t("spaces"), len(explicit_available), t("available_plural")),
+        (t("errors"), errors, t("missing_data")),
+        (t("trees"), active_trees, t("registered")),
+        (t("events_15d"), len(next_15_events), t("pending_next")),
     ]
     dashboard_metric_cards(cards)
 
     c1, c2 = st.columns([1,1])
     with c1:
-        html_block('''
+        html_block(f'''
         <div class="dash-panel">
-            <div class="dash-panel-title">🌧️ Lluvias y clima</div>
-            <div class="dash-line"><span class="dash-pill pill-blue">Moravia</span> Pendiente integrar lluvia real.</div>
-            <div class="dash-line"><span class="dash-pill pill-blue">Frailes</span> Pendiente integrar lluvia real.</div>
-            <div class="dash-line"><span class="dash-pill pill-yellow">Uso previsto</span> mover foliares, riego y controles según pronóstico.</div>
+            <div class="dash-panel-title">{t("rain_weather")}</div>
+            <div class="dash-line"><span class="dash-pill pill-blue">Moravia</span> {t("pending_real_rain")}</div>
+            <div class="dash-line"><span class="dash-pill pill-blue">Frailes</span> {t("pending_real_rain")}</div>
+            <div class="dash-line"><span class="dash-pill pill-yellow">{t("intended_use")}</span> {t("weather_use")}</div>
         </div>
         ''')
     with c2:
         lines = []
         if len(overdue_events) > 0:
-            lines.append(f'<div class="dash-line"><span class="dash-pill pill-red">Vencidos</span> {len(overdue_events)} eventos sin completar.</div>')
+            lines.append(f'<div class="dash-line"><span class="dash-pill pill-red">{t("overdue")}</span> {len(overdue_events)} {t("events_not_done")}</div>')
         if len(next_15_events) > 0:
             sample = next_15_events.sort_values("_date").head(3)
             for _, r in sample.iterrows():
                 lines.append(f'<div class="dash-line"><span class="dash-pill pill-yellow">{fmt_date(r["_date"])}</span> {r.get("Tipo_Evento", "Evento")} · {r.get("Target_Label", "")}</div>')
         if not lines:
-            lines.append('<div class="dash-line"><span class="dash-pill pill-green">Sin alertas</span> No hay eventos próximos en 15 días.</div>')
+            lines.append(f'<div class="dash-line"><span class="dash-pill pill-green">{t("no_alerts")}</span> {t("no_events_15")}</div>')
         html_block(f'''
         <div class="dash-panel">
-            <div class="dash-panel-title">⚠️ Eventos especiales</div>
+            <div class="dash-panel-title">{t("special_events")}</div>
             {''.join(lines)}
         </div>
         ''')
 
-    html_block('<div class="dash-panel"><div class="dash-panel-title">📝 Notas rápidas</div><div class="dash-line">Captura temporal para ideas, observaciones o mensajes que luego GPT puede convertir en cambios de datos.</div></div>')
-    note = st.text_area("Nueva nota", placeholder="Ejemplo: En Frailes vi hojas con manchas en pepino. Programar control fitosanitario con Mistral.", height=90, key="quick_note")
+    html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("quick_notes")}</div><div class="dash-line">{t("quick_notes_help")}</div></div>')
+    note = st.text_area(t("new_note"), placeholder=t("note_placeholder"), height=90, key="quick_note")
     if note.strip():
-        st.download_button("Descargar nota", data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
+        st.download_button(t("download_note"), data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
 
 
 def crop_card(row, idx, events=None):
@@ -708,9 +990,9 @@ def crop_card(row, idx, events=None):
             f"""
             <div class="crop-card available-card">
                 <div class="icon-circle {meta['class']}">{meta['icon']}</div>
-                <div class="crop-name">Disponible</div>
-                <div class="qty">Espacio disponible</div>
-                <div class="info-line">Estado: <b>Disponible</b></div>
+                <div class="crop-name">{tv("Disponible")}</div>
+                <div class="qty">{t("available_space")}</div>
+                <div class="info-line">{t("status")}: <b>{tv("Disponible")}</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -724,10 +1006,10 @@ def crop_card(row, idx, events=None):
             <div class="icon-circle {meta['class']}">{meta['icon']}</div>
             <div class="crop-name">{crop}</div>
             <div class="qty">{row['Cantidad']}</div>
-            <div class="info-line">Estado: <b>{display_state(row)}</b></div>
+            <div class="info-line">{t("status")}: <b>{tv(display_state(row))}</b></div>
             <div class="info-line">{base_date_label(row)}</div>
-            {days_html(row['Cosecha_Min'], 'Cosecha min')}
-            {days_html(row['Cosecha_Max'], 'Cosecha max')}
+            {days_html(row['Cosecha_Min'], t("harvest_min"))}
+            {days_html(row['Cosecha_Max'], t("harvest_max"))}
             {control_html}
         </div>
         """,
@@ -764,16 +1046,16 @@ def bed_panel(unit_row, crops_df, events=None):
             f"""
             <div class="bed-header">
                 <div class="bed-title">{unidad}</div>
-                <span class="badge {badge_class}">{status}</span>
+                <span class="badge {badge_class}">{tv(status)}</span>
             </div>
             """,
             unsafe_allow_html=True,
         )
         if str(unit_row.get("Estado_Unidad", "")).lower().startswith("no activa"):
-            st.markdown('<div class="empty-card">No activa</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="empty-card">{tv("No activa")}</div>', unsafe_allow_html=True)
             return
         if crops_df is None or crops_df.empty:
-            st.markdown('<div class="empty-card">Sin cultivos activos</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="empty-card">{t("no_active_crops")}</div>', unsafe_allow_html=True)
             return
         cols_per_row = 2 if len(crops_df) <= 4 else 3
         records = list(sort_crops_for_display(crops_df).iterrows())
@@ -805,17 +1087,17 @@ def month_week_numbers(year, month):
 
 def event_status(row):
     if pd.isna(row["Cosecha_Min"]):
-        return "Sin fecha", "future"
+        return t("date_none"), "future"
     min_date = pd.to_datetime(row["Cosecha_Min"]).date()
     max_date = pd.to_datetime(row["Cosecha_Max"]).date() if pd.notna(row["Cosecha_Max"]) else None
     days = (min_date - date.today()).days
     if max_date is not None and max_date < date.today():
-        return "Cosecha máxima vencida", "overdue"
+        return t("max_overdue"), "overdue"
     if days <= 0:
-        return "Cosecha disponible", "available"
+        return t("harvest_available"), "available"
     if days <= 15:
-        return "Próxima cosecha", "soon"
-    return "Cosecha futura", "future"
+        return t("upcoming_harvest"), "soon"
+    return t("future_harvest"), "future"
 
 
 def calendar_event_card(row):
@@ -832,7 +1114,7 @@ def calendar_event_card(row):
                     <div class="event-crop">{crop}</div>
                     <div class="event-meta">{row['Finca']} · {row['Unidad']}</div>
                     <div class="event-date {date_class}">{status_label}: {fmt_date(row['Cosecha_Min'])}</div>
-                    <div class="event-meta">Máx: {fmt_date(row['Cosecha_Max'])}</div>
+                    <div class="event-meta">{t("harvest_max")}: {fmt_date(row['Cosecha_Max'])}</div>
                 </div>
             </div>
         </div>
@@ -853,14 +1135,14 @@ def render_calendar_view(all_df):
         while m > 12:
             m -= 12
             y += 1
-        month_options.append((f"{MONTHS_ES[m]} {y}", y, m))
+        month_options.append((f"{month_name(m)} {y}", y, m))
 
     labels = [x[0] for x in month_options]
-    default_label = f"{MONTHS_ES[today.month]} {today.year}"
+    default_label = f"{month_name(today.month)} {today.year}"
 
     c1, c2, c3, c4 = st.columns([1.15, 1.15, 1.35, 1.25])
     with c1:
-        selected_label = st.selectbox("Mes", labels, index=labels.index(default_label) if default_label in labels else 0, key="cal_mes")
+        selected_label = st.selectbox(t("month"), labels, index=labels.index(default_label) if default_label in labels else 0, key="cal_mes")
     _, selected_year, selected_month = next(x for x in month_options if x[0] == selected_label)
 
     calendar_base = all_df.copy()
@@ -872,20 +1154,20 @@ def render_calendar_view(all_df):
     calendar_base["Cosecha_Date"] = calendar_base["Cosecha_Min"].dt.date
 
     with c2:
-        fincas = ["Todas"] + [f for f in ["Moravia", "Frailes"] if f in set(calendar_base["Finca"].dropna().unique())]
+        fincas = [t("all_f")] + [f for f in ["Moravia", "Frailes"] if f in set(calendar_base["Finca"].dropna().unique())]
         fincas += [f for f in sorted(calendar_base["Finca"].dropna().unique()) if f not in fincas]
-        cal_finca = st.selectbox("Finca", fincas, key="cal_finca")
-    if cal_finca != "Todas":
+        cal_finca = st.selectbox(t("farm"), fincas, key="cal_finca")
+    if cal_finca != t("all_f"):
         calendar_base = calendar_base[calendar_base["Finca"] == cal_finca]
 
     with c3:
-        camas = ["Todas"] + sorted(calendar_base["Unidad"].dropna().unique())
-        cal_cama = st.selectbox("Cama", camas, key="cal_cama")
-    if cal_cama != "Todas":
+        camas = [t("all_f")] + sorted(calendar_base["Unidad"].dropna().unique())
+        cal_cama = st.selectbox(t("bed"), camas, key="cal_cama")
+    if cal_cama != t("all_f"):
         calendar_base = calendar_base[calendar_base["Unidad"] == cal_cama]
 
     with c4:
-        only_soon = st.checkbox("Solo próximos 15 días", value=False, key="cal_only_soon")
+        only_soon = st.checkbox(t("only_next_15"), value=False, key="cal_only_soon")
 
     calendar_df = calendar_base.copy()
     month_mask = calendar_df["Cosecha_Date"].apply(lambda d: d.year == selected_year and d.month == selected_month)
@@ -915,7 +1197,7 @@ def render_calendar_view(all_df):
             f'<div class="event-crop">{crop}</div>'
             f'<div class="event-meta">{row["Finca"]} · {row["Unidad"]}</div>'
             f'<div class="event-date {date_class}">{status_label}: {fmt_date(row["Cosecha_Min"])}</div>'
-            f'<div class="event-meta">Máx: {fmt_date(row["Cosecha_Max"])}</div>'
+            f'<div class="event-meta">{t("harvest_max")}: {fmt_date(row["Cosecha_Max"])}</div>'
             f'</div></div></div>'
         )
 
@@ -928,15 +1210,15 @@ def render_calendar_view(all_df):
                 events = calendar_df[calendar_df["Week_Num"] == week_num].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
                 events_html = "".join(build_event_html(row) for _, row in events.iterrows())
                 if not events_html:
-                    events_html = '<div class="no-events">Sin cosechas</div>'
+                    events_html = f'<div class="no-events">{t("no_available_harvest")}</div>'
                 html_block(
-                    f'<div class="week-card"><div class="week-title">Semana {int(week_num)}</div>'
+                    f'<div class="week-card"><div class="week-title">{t("week")} {int(week_num)}</div>'
                     f'<div class="week-range">{week_start.strftime("%d %b")} – {week_end.strftime("%d %b")}</div>'
                     f'{events_html}</div>'
                 )
 
     if len(week_nums) == 0:
-        msg = "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados." if only_soon else "No hay cultivos con cosecha mínima en el mes seleccionado."
+        msg = t("no_upcoming_15") if only_soon else t("no_min_month")
         html_block(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>')
 
 
@@ -988,9 +1270,9 @@ def render_tree_card(row, events=None, insumos=None):
             <div class="tree-icon">{row['Icono']}</div>
             <div style="width:100%;">
                 <div class="tree-name">{row['Arbol']}</div>
-                <div class="tree-line">Estado fenológico <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{row['Estado_Fenologico']}</span></div>
+                <div class="tree-line">{t("phenology")} <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{tv(row['Estado_Fenologico'])}</span></div>
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
-                <div class="tree-line">Estado sanitario <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {row['Estado_Sanitario']}</span></div>
+                <div class="tree-line">{t("health_status")} <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {tv(row['Estado_Sanitario'])}</span></div>
                 {control_html}
                 {history_html}
                 {next_abono_html}
@@ -1002,12 +1284,12 @@ def render_tree_card(row, events=None, insumos=None):
 def render_arboles_view(trees, events, insumos):
     c1, c2 = st.columns([1,1])
     with c1:
-        finca_sel = st.selectbox("Finca", ["Todas"] + [f for f in ["Moravia","Frailes"] if f in trees["Finca"].unique()], key="tree_finca")
+        finca_sel = st.selectbox(t("farm"), [t("all_f")] + [f for f in ["Moravia","Frailes"] if f in trees["Finca"].unique()], key="tree_finca")
     with c2:
-        health_sel = st.selectbox("Estado sanitario", ["Todos"] + sorted(trees["Estado_Sanitario"].unique()), key="tree_health")
-    if finca_sel != "Todas":
+        health_sel = st.selectbox(t("health_status"), [t("all_m")] + sorted(trees["Estado_Sanitario"].unique()), key="tree_health", format_func=tv)
+    if finca_sel != t("all_f"):
         trees = trees[trees["Finca"] == finca_sel]
-    if health_sel != "Todos":
+    if health_sel != t("all_m"):
         trees = trees[trees["Estado_Sanitario"] == health_sel]
     for finca, group in trees.groupby("Finca", sort=False):
         st.markdown(f'<div class="section-title">📍 {finca}</div>', unsafe_allow_html=True)
@@ -1022,28 +1304,28 @@ def render_arboles_view(trees, events, insumos):
 def render_eventos_view(events, insumos):
     c1, c2, c3 = st.columns([1.1, 1.1, 1.1])
     with c1:
-        tipo_options = ["Todos"] + sorted([x for x in events["Tipo_Evento"].dropna().unique() if x])
-        tipo_sel = st.selectbox("Tipo de evento", tipo_options, key="evt_tipo")
+        tipo_options = [t("all_m")] + sorted([x for x in events["Tipo_Evento"].dropna().unique() if x])
+        tipo_sel = st.selectbox(t("event_type"), tipo_options, key="evt_tipo", format_func=tv)
     with c2:
-        finca_options = ["Todas"] + sorted([x for x in events["Finca"].dropna().unique() if x])
-        finca_sel = st.selectbox("Finca", finca_options, key="evt_finca")
+        finca_options = [t("all_f")] + sorted([x for x in events["Finca"].dropna().unique() if x])
+        finca_sel = st.selectbox(t("farm"), finca_options, key="evt_finca")
     with c3:
-        estado_options = ["Todos"] + sorted([x for x in events["Estado"].dropna().unique() if x])
-        estado_sel = st.selectbox("Estado", estado_options, key="evt_estado")
+        estado_options = [t("all_m")] + sorted([x for x in events["Estado"].dropna().unique() if x])
+        estado_sel = st.selectbox(t("event_status"), estado_options, key="evt_estado", format_func=tv)
 
     filtered_events = events.copy()
-    if tipo_sel != "Todos":
+    if tipo_sel != t("all_m"):
         filtered_events = filtered_events[filtered_events["Tipo_Evento"] == tipo_sel]
-    if finca_sel != "Todas":
+    if finca_sel != t("all_f"):
         filtered_events = filtered_events[filtered_events["Finca"] == finca_sel]
-    if estado_sel != "Todos":
+    if estado_sel != t("all_m"):
         filtered_events = filtered_events[filtered_events["Estado"] == estado_sel]
 
     if filtered_events.empty:
-        st.markdown('<div class="calendar-toolbar"><div class="calendar-note">No hay eventos agrícolas para los filtros seleccionados.</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{t("no_events_filters")}</div></div>', unsafe_allow_html=True)
     else:
         for tipo, group in filtered_events.groupby("Tipo_Evento", sort=False):
-            st.markdown(f'<div class="event-section-title">{tipo}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="event-section-title">{tv(tipo)}</div>', unsafe_allow_html=True)
             group = group.copy()
             group["_date"] = group.apply(event_effective_date, axis=1)
             group = group.sort_values(["_date", "Finca", "Target_Label"], na_position="last")
@@ -1054,8 +1336,8 @@ def render_eventos_view(events, insumos):
                     with col:
                         effective = row.get("_date")
                         cls = event_status_class(row.get("Estado"), effective)
-                        fecha_txt = fmt_date(effective) if pd.notna(effective) else "Sin fecha"
-                        insumo = row.get("Nombre_Insumo") or "Sin insumo"
+                        fecha_txt = fmt_date(effective) if pd.notna(effective) else t("date_none")
+                        insumo = row.get("Nombre_Insumo") or t("no_input")
                         target = row.get("Target_Label") or row.get("Target_ID")
                         html = f"""
                         <div class="ag-event-card">
@@ -1064,18 +1346,18 @@ def render_eventos_view(events, insumos):
                                     <div class="ag-event-title">{target}</div>
                                     <div class="ag-event-meta">{row.get("Finca", "")} · {row.get("Target_Tipo", "")}</div>
                                 </div>
-                                <span class="ag-event-pill {cls}">{row.get("Estado", "")}</span>
+                                <span class="ag-event-pill {cls}">{tv(row.get("Estado", ""))}</span>
                             </div>
-                            <div class="ag-event-meta"><b>Insumo:</b> {insumo}</div>
-                            <div class="ag-event-meta"><b>Fecha:</b> {fecha_txt}</div>
+                            <div class="ag-event-meta"><b>{t("input")}:</b> {insumo}</div>
+                            <div class="ag-event-meta"><b>{t("date")}:</b> {fecha_txt}</div>
                             <div class="ag-event-meta">{row.get("Notas", "")}</div>
                         </div>
                         """
                         st.markdown(html, unsafe_allow_html=True)
 
-    with st.expander("Catálogo de insumos"):
+    with st.expander(t("input_catalog")):
         if insumos is None or insumos.empty:
-            st.write("Sin insumos registrados.")
+            st.write(t("no_inputs"))
         else:
             for tipo, group in insumos.groupby("Tipo", sort=False):
                 st.markdown(f"**{tipo}**")
@@ -1084,14 +1366,14 @@ def render_eventos_view(events, insumos):
                     cols = st.columns(3)
                     for col, (_, row) in zip(cols, records[start:start+3]):
                         with col:
-                            compra = "Compra requerida" if str(row.get("Compra_Requerida", "")).lower().startswith("s") else "Disponible"
+                            compra = t("purchase_required") if str(row.get("Compra_Requerida", "")).lower().startswith("s") else t("available_stock")
                             html = f"""
                             <div class="insumo-card">
                                 <div class="insumo-name">{row.get("Nombre", "")}</div>
                                 <div class="insumo-meta">{row.get("Uso_Principal", "")}</div>
-                                <div class="insumo-meta"><b>Cantidad guía:</b> {row.get("Cantidad_Guia", "Según criterio")}</div>
-                                <div class="insumo-meta"><b>Momento:</b> {row.get("Momento_Aplicacion", "Según estado")}</div>
-                                <div class="insumo-meta"><b>Frecuencia:</b> {row.get("Frecuencia_Dias", "") if str(row.get("Frecuencia_Dias", "")).strip() else "Sin regla"} días</div>
+                                <div class="insumo-meta"><b>{t("guide_qty")}:</b> {row.get("Cantidad_Guia", t("according_criteria"))}</div>
+                                <div class="insumo-meta"><b>{t("timing")}:</b> {row.get("Momento_Aplicacion", t("according_state"))}</div>
+                                <div class="insumo-meta"><b>{t("frequency")}:</b> {row.get("Frecuencia_Dias", "") if str(row.get("Frecuencia_Dias", "")).strip() else t("no_rule")} días</div>
                                 <div class="insumo-meta"><b>{compra}</b></div>
                             </div>
                             """
@@ -1109,11 +1391,11 @@ def render_account_view():
         st.image(str(LOGO_FILE), width=150)
     else:
         st.markdown('<div style="color:#0f2f24;font-size:24px;font-weight:800;">Hydra Q</div>', unsafe_allow_html=True)
-    st.markdown("""
+    st.markdown(f"""
         </div>
         <div>
-          <div style="font-size:26px;font-weight:800;line-height:1.1;">Cuenta</div>
-          <div style="opacity:.88;font-size:14px;margin-top:4px;">Perfil y configuración general de FincaOS</div>
+          <div style="font-size:26px;font-weight:800;line-height:1.1;">{t("account")}</div>
+          <div style="opacity:.88;font-size:14px;margin-top:4px;">{t("account_profile")}</div>
         </div>
       </div>
     </div>
@@ -1121,46 +1403,56 @@ def render_account_view():
 
     c1, c2 = st.columns([1.15, 1])
     with c1:
-        st.markdown("""
+        st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
-          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">Usuario</div>
-          <div style="font-size:15px;color:#1f2937;"><b>Nombre:</b> Pablo Castro</div>
-          <div style="font-size:15px;color:#1f2937;"><b>Correo:</b> no configurado</div>
+          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("user")}</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("name")}:</b> Pablo Castro</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("email")}:</b> {t("not_configured")}</div>
         </div>
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;">
-          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">Permisos de acceso</div>
-          <div style="font-size:14px;color:#374151;">Módulo reservado para administrar accesos. No desarrollado en esta versión.</div>
-          <div style="display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;background:#e5e7eb;color:#374151;font-size:12px;font-weight:700;">Trabajo futuro</div>
+          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("access_permissions")}</div>
+          <div style="font-size:14px;color:#374151;">{t("access_future")}</div>
+          <div style="display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;background:#e5e7eb;color:#374151;font-size:12px;font-weight:700;">{t("future_work")}</div>
         </div>
         """, unsafe_allow_html=True)
     with c2:
-        st.markdown("""
+        st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
-          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">Versión</div>
-          <div style="font-size:15px;color:#1f2937;"><b>Developer Version:</b> 20.1</div>
-          <div style="font-size:15px;color:#1f2937;"><b>Fecha:</b> 2026-06-08</div>
-          <div style="font-size:15px;color:#1f2937;"><b>Desarrollado con:</b> ChatGPT, MS Excel / Google Sheets, GitHub y Streamlit</div>
+          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 22.0</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-11</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;">
-          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">🔌 PlugIns</div>
-          <div style="font-size:14px;color:#374151;">Espacio reservado para integraciones futuras: clima, lluvia, GPT Actions y Google Sheets.</div>
+          <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("plugins")}</div>
+          <div style="font-size:14px;color:#374151;">{t("plugins_text")}</div>
         </div>
         """, unsafe_allow_html=True)
 
 df, units, trees, eventos, insumos = load_data()
 
-st.markdown('<div class="app-title">Finca OS Dev</div>', unsafe_allow_html=True)
+with st.sidebar:
+    lang_label = st.selectbox(
+        t("language"),
+        list(LANG_LABELS.keys()),
+        index=list(LANG_LABELS.values()).index(st.session_state.get("lang", "es")),
+        key="lang_selector",
+    )
+    st.session_state["lang"] = LANG_LABELS[lang_label]
+
+st.markdown(f'<div class="app-title">{t("app_title")}</div>', unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("Filtros")
-    st.caption("Datos: Google Sheets")
+    st.header(t("filters"))
+    st.caption(t("data_source"))
     finca_options = [f for f in ["Moravia", "Frailes"] if f in set(units["Finca"].dropna().unique())] + [f for f in sorted(units["Finca"].dropna().unique()) if f not in ["Moravia", "Frailes"]]
-    finca_filter = st.multiselect("Finca", finca_options, default=finca_options)
+    finca_filter = st.multiselect(t("farm"), finca_options, default=finca_options)
     unidad_options = sorted(units[units["Finca"].isin(finca_filter)]["Unidad"].dropna().unique()) if finca_filter else sorted(units["Unidad"].dropna().unique())
-    unidad_filter = st.multiselect("Cama", unidad_options)
-    cultivo_filter = st.multiselect("Cultivo", sorted(df["Cultivo"].dropna().unique()))
-    estado_filter = st.multiselect("Estado visual", sorted(set(list(df["Visual_Status"].dropna().unique()) + ["No activa"])))
-    show_detail_table = st.checkbox("Mostrar tabla detalle", value=False)
+    unidad_filter = st.multiselect(t("bed"), unidad_options)
+    cultivo_filter = st.multiselect(t("crop"), sorted(df["Cultivo"].dropna().unique()))
+    estado_options = sorted(set(list(df["Visual_Status"].dropna().unique()) + ["No activa"]))
+    estado_filter = st.multiselect(t("visual_status"), estado_options, format_func=tv)
+    show_detail_table = st.checkbox(t("show_detail_table"), value=False)
 
 filtered_units = units[units["Finca"].isin(finca_filter)] if finca_filter else units.copy()
 if unidad_filter:
@@ -1176,7 +1468,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_calendario, tab_cuenta = st.tabs(["📊 Dashboard", "🛏️ Camas", "🌳 Árboles", "🧪 Eventos", "📅 Calendario", "👤 Cuenta"])
+tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_calendario, tab_cuenta = st.tabs([f"📊 {t("dashboard")}", f"🛏️ {t("beds")}", f"🌳 {t("trees")}", f"🧪 {t("events")}", f"📅 {t("calendar")}", f"👤 {t("account")}"])
 
 with tab_dashboard:
     render_dashboard_view(filtered, filtered_units, eventos, trees)
@@ -1206,7 +1498,7 @@ with tab_cuenta:
 
 if show_detail_table:
     st.divider()
-    st.subheader("Detalle de datos")
+    st.subheader(t("detail_title"))
     show_cols = [
         "Finca", "Unidad", "Cultivo", "Cantidad", "Estado_Actual",
         "Fecha_Siembra", "Fecha_Trasplante", "Cosecha_Min", "Cosecha_Max", "Visual_Status"
