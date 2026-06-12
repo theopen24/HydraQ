@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import date, datetime, timedelta
 import calendar
+import re
 from textwrap import dedent
 
 import pandas as pd
@@ -410,7 +411,15 @@ UI_TEXT['es'].update({
     'no_notes':'Sin notas',
     'current_event':'Evento agrícola',
     'tree_history_help':'Historial cronológico más reciente',
-    'future_section_help':'Próximas acciones sugeridas y observaciones'
+    'future_section_help':'Próximas acciones sugeridas y observaciones',
+    'doses':'Dosis',
+    'field_dose_reference':'Referencia de dosis en campo',
+    'liquid_foliar_controls':'Controles fitosanitarios y abonos foliares',
+    'yaramila_tree_reference':'YaraMila Hydrocomplex por árbol',
+    'dose_per_liter':'Dosis por litro',
+    'dose_per_20l':'Dosis por bomba 20 L',
+    'source_note':'Nota / fuente',
+    'reference_only':'Referencia operativa; validar etiqueta del producto antes de aplicar.'
 })
 UI_TEXT['en'].update({
     'general_info':'General information',
@@ -422,7 +431,15 @@ UI_TEXT['en'].update({
     'no_notes':'No notes',
     'current_event':'Agricultural event',
     'tree_history_help':'Most recent chronological history',
-    'future_section_help':'Suggested next actions and observations'
+    'future_section_help':'Suggested next actions and observations',
+    'doses':'Doses',
+    'field_dose_reference':'Field dose reference',
+    'liquid_foliar_controls':'Phytosanitary controls and foliar fertilizers',
+    'yaramila_tree_reference':'YaraMila Hydrocomplex by tree',
+    'dose_per_liter':'Dose per liter',
+    'dose_per_20l':'Dose per 20 L sprayer',
+    'source_note':'Note / source',
+    'reference_only':'Operational reference; validate product label before applying.'
 })
 
 st.markdown(
@@ -697,6 +714,10 @@ st.markdown(
 .tree-header {display:flex; align-items:center; gap:14px; margin-bottom:10px;}
 .tree-body {display:flex; flex-direction:column; gap:10px;}
 .tree-section {background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px;}
+.tree-section.general-info {background:#f8fafc; border-left:5px solid #86efac;}
+.tree-section.registered-events {background:#f0fdf4; border-left:5px solid #22c55e;}
+.tree-section.future-actions {background:#eff6ff; border-left:5px solid #3b82f6;}
+.tree-section + .tree-section {margin-top:2px;}
 .tree-subtitle {font-size:12px; font-weight:950; color:#0f3d25; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
 .tree-subnote {font-size:11px; color:#64748b; font-weight:750; margin:-2px 0 6px 0;}
 .pending-table {width:100%; border-collapse:collapse; margin-top:6px; font-size:11px;}
@@ -712,6 +733,23 @@ st.markdown(
 .progress-meta {font-size:12px; color:#64748b; font-weight:750;}
 .weather-reference {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-weight:800; margin:8px 0 12px 0;}
 
+
+
+.bed-thumb-link {display:inline-block; width:20%; max-width:145px; min-width:92px;}
+.bed-thumb-link .bed-thumb {width:100%; max-width:145px; min-width:92px;}
+.img-modal {position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; align-items:center; justify-content:center; z-index:999999; padding:24px;}
+.img-modal:target {display:flex;}
+.img-modal img {max-width:92vw; max-height:86vh; border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,.45);}
+.img-modal .close {position:absolute; top:18px; right:24px; color:white; text-decoration:none; font-size:38px; font-weight:950; line-height:1;}
+.img-modal-caption {position:absolute; bottom:18px; color:white; background:rgba(0,0,0,.42); padding:8px 12px; border-radius:999px; font-size:13px; font-weight:800;}
+.dose-section-title {font-size:24px; font-weight:950; color:#ffffff; margin:20px 0 12px 0;}
+.dose-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-bottom:18px;}
+.dose-card {background:rgba(255,255,255,.96); border:1px solid rgba(255,255,255,.7); border-radius:16px; padding:13px 14px; color:#0f172a; box-shadow:0 6px 16px rgba(0,0,0,.14);}
+.dose-name {font-size:16px; font-weight:950; color:#0f3d25; margin-bottom:5px;}
+.dose-chip {display:inline-block; padding:4px 9px; border-radius:999px; background:#ecfdf5; color:#166534; font-size:12px; font-weight:900; margin:2px 4px 5px 0;}
+.dose-line {font-size:13px; color:#334155; font-weight:750; margin-top:4px;}
+.dose-note {font-size:12px; color:#64748b; font-weight:700; margin-top:6px;}
+.dose-warning {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-size:13px; font-weight:800; margin-bottom:14px;}
 
 </style>
 """,
@@ -808,7 +846,9 @@ def load_data():
 
     insumos = _read_sheet(
         "Insumos",
-        ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"]
+        ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida",
+         "Cantidad_Guia","Momento_Aplicacion","Frecuencia_Dias","Dosis_Por_Litro","Unidad_Dosis",
+         "Tipo_Dosis","Fuente_Dosis","Notas_Dosis"]
     )
 
     log_gpt = _read_sheet(
@@ -906,12 +946,23 @@ def bed_photo_for(unit_name):
 
 def normalized_tree_icon(row):
     name = str(row.get("Arbol", "")).lower()
-    icon = str(row.get("Icono", "") or "🌳")
-    if "limón mandarina" in name or "limon mandarina" in name:
+    if "manzano" in name or "manzana" in name:
+        return "🍎"
+    if "limón" in name or "limon" in name:
         return "🍋"
-    if "🍋" in icon and "🍊" in icon:
-        return "🍋"
-    return icon
+    if "naranja" in name or "mandarina" in name:
+        return "🍊"
+    if "mango" in name or "manga" in name:
+        return "🥭"
+    if "durazno" in name:
+        return "🌸"
+    if "banano" in name or "plátano" in name or "platano" in name:
+        return "🍌"
+    icon = str(row.get("Icono", "") or "🌳").strip()
+    for candidate in ["🍎", "🍋", "🍊", "🥭", "🌸", "🍌", "🌳"]:
+        if candidate in icon:
+            return candidate
+    return "🌳"
 
 
 def event_effective_date(row):
@@ -1386,8 +1437,21 @@ def bed_panel(unit_row, crops_df, events=None):
             import base64, mimetypes
             mime = mimetypes.guess_type(photo_path)[0] or "image/jpeg"
             uri = "data:" + mime + ";base64," + base64.b64encode(Path(photo_path).read_bytes()).decode("utf-8")
+            safe_id = re.sub(r'[^a-zA-Z0-9_-]+', '_', str(unidad))
             st.markdown(
-                f'<div class="bed-thumb-wrap"><img class="bed-thumb" src="{uri}"><div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}</div></div>',
+                f'''
+                <div class="bed-thumb-wrap">
+                    <a class="bed-thumb-link" href="#foto_{safe_id}">
+                        <img class="bed-thumb" src="{uri}" title="Click para ampliar">
+                    </a>
+                    <div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}<br><span style="font-size:11px;opacity:.8;">Click para ampliar</span></div>
+                </div>
+                <div id="foto_{safe_id}" class="img-modal">
+                    <a href="#" class="close">×</a>
+                    <img src="{uri}">
+                    <div class="img-modal-caption">{unidad} · {photo_caption}</div>
+                </div>
+                ''',
                 unsafe_allow_html=True,
             )
         else:
@@ -1624,19 +1688,19 @@ def render_tree_card(row, events=None, insumos=None):
             </div>
         </div>
         <div class="tree-body">
-            <div class="tree-section">
+            <div class="tree-section general-info">
                 <div class="tree-subtitle">{t('general_info')}</div>
                 <div class="tree-line">{t("phenology")} <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{tv(row['Estado_Fenologico'])}</span></div>
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
                 <div class="tree-line">{t("health_status")} <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {tv(row['Estado_Sanitario'])}</span></div>
                 {control_html}
             </div>
-            <div class="tree-section">
+            <div class="tree-section registered-events">
                 <div class="tree-subtitle">{t('registered_events')}</div>
                 <div class="tree-subnote">{t('tree_history_help')}</div>
                 {history_html}
             </div>
-            <div class="tree-section">
+            <div class="tree-section future-actions">
                 <div class="tree-subtitle">{t('future_actions_notes')}</div>
                 <div class="tree-subnote">{t('future_section_help')}</div>
                 {next_abono_html}
@@ -1748,6 +1812,83 @@ def render_eventos_view(events, insumos):
 
 
 
+
+
+def _txt(value, fallback=""):
+    if value is None or pd.isna(value):
+        return fallback
+    text = str(value).strip()
+    if text.lower() in ["", "nan", "none"]:
+        return fallback
+    return text
+
+
+def render_dosis_view(insumos):
+    st.markdown(f'<div class="section-title">🧪 {t("field_dose_reference")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="dose-warning">{t("reference_only")} Datos leídos desde la pestaña Insumos. Dosis mostradas solo por 1 litro.</div>', unsafe_allow_html=True)
+
+    if insumos is None or insumos.empty:
+        st.write(t("no_inputs"))
+        return
+
+    df_ins = insumos.copy()
+    for col in ["Dosis_Por_Litro", "Unidad_Dosis", "Tipo_Dosis", "Fuente_Dosis", "Notas_Dosis", "Cantidad_Guia", "Momento_Aplicacion", "Frecuencia_Dias"]:
+        if col not in df_ins.columns:
+            df_ins[col] = ""
+
+    tipo = df_ins.get("Tipo", "").astype(str).str.lower()
+    dosis = df_ins.get("Dosis_Por_Litro", "").astype(str).str.lower()
+    liquid_mask = (
+        tipo.str.contains("control|foliar|coadyuv", na=False)
+        & ~dosis.str.contains("no aplica", na=False)
+        & dosis.str.strip().ne("")
+    )
+    liquid_rows = df_ins[liquid_mask].copy()
+
+    st.markdown(f'<div class="dose-section-title">{t("liquid_foliar_controls")}</div>', unsafe_allow_html=True)
+    if liquid_rows.empty:
+        st.markdown('<div class="dose-warning">No hay dosis por litro cargadas en Insumos.</div>', unsafe_allow_html=True)
+    else:
+        cards = ['<div class="dose-grid">']
+        for _, r in liquid_rows.iterrows():
+            dose_l = _txt(r.get("Dosis_Por_Litro"), t("according_criteria"))
+            source = _txt(r.get("Fuente_Dosis"), "")
+            note = _txt(r.get("Notas_Dosis"), "")
+            cards.append(f'''
+            <div class="dose-card">
+                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
+                <span class="dose-chip">{_txt(r.get("Tipo"))}</span>
+                <div class="dose-line"><b>{t("dose_per_liter")}:</b> {dose_l}</div>
+                <div class="dose-note"><b>{t("source_note")}:</b> {source}</div>
+                <div class="dose-note">{note}</div>
+            </div>
+            ''')
+        cards.append('</div>')
+        html_block(''.join(cards))
+
+    st.markdown(f'<div class="dose-section-title">{t("yaramila_tree_reference")}</div>', unsafe_allow_html=True)
+    ymask = df_ins.get("Nombre", "").astype(str).str.lower().str.contains("yaramila", na=False)
+    y_rows = df_ins[ymask].copy()
+    if y_rows.empty:
+        st.markdown('<div class="dose-warning">No hay registro de YaraMila en Insumos.</div>', unsafe_allow_html=True)
+    else:
+        cards = ['<div class="dose-grid">']
+        for _, r in y_rows.iterrows():
+            cards.append(f'''
+            <div class="dose-card">
+                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
+                <span class="dose-chip">{_txt(r.get("Tipo_Dosis"), "Por árbol / corona")}</span>
+                <div class="dose-line"><b>{t("guide_qty")}:</b> {_txt(r.get("Cantidad_Guia"), t("according_criteria"))}</div>
+                <div class="dose-line"><b>{t("frequency")}:</b> {_txt(r.get("Frecuencia_Dias"), t("no_rule"))} días</div>
+                <div class="dose-line"><b>{t("timing")}:</b> {_txt(r.get("Momento_Aplicacion"), t("according_state"))}</div>
+                <div class="dose-note"><b>{t("source_note")}:</b> {_txt(r.get("Fuente_Dosis"), "Referencia interna FincaOS")}</div>
+                <div class="dose-note">{_txt(r.get("Notas_Dosis"), "")}</div>
+            </div>
+            ''')
+        cards.append('</div>')
+        html_block(''.join(cards))
+
+
 def render_account_view():
     st.markdown("""
     <div style="background:#0f2f24;border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:18px 20px;margin-bottom:16px;color:#fff;">
@@ -1786,8 +1927,8 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 23.2</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-11</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 28</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-12</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;">
@@ -1835,7 +1976,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_calendario, tab_clima, tab_avance, tab_cuenta = st.tabs([f"📊 {t('dashboard')}", f"🛏️ {t('beds')}", f"🌳 {t('trees')}", f"🧪 {t('events')}", f"📅 {t('calendar')}", f"☁️ {t('climate')}", f"📷 {t('progress')}", f"👤 {t('account')}"] )
+tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_dosis, tab_calendario, tab_clima, tab_avance, tab_cuenta = st.tabs([f"📊 {t('dashboard')}", f"🛏️ {t('beds')}", f"🌳 {t('trees')}", f"🧪 {t('events')}", f"📏 {t('doses')}", f"📅 {t('calendar')}", f"☁️ {t('climate')}", f"📷 {t('progress')}", f"👤 {t('account')}"] )
 
 with tab_dashboard:
     render_dashboard_view(filtered, filtered_units, eventos, trees, log_gpt)
@@ -1860,6 +2001,9 @@ with tab_arboles:
 
 with tab_eventos:
     render_eventos_view(eventos, insumos)
+
+with tab_dosis:
+    render_dosis_view(insumos)
 
 with tab_calendario:
     render_calendar_view(df)
