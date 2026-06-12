@@ -126,6 +126,7 @@ UI_TEXT = {
         "no_upcoming_15": "No hay cosechas próximas en los próximos 15 días para los filtros seleccionados.",
         "no_min_month": "No hay cultivos con cosecha mínima en el mes seleccionado.",
         "event_type": "Tipo de evento",
+        "event_status": "Estado del evento",
         "all_f": "Todas",
         "all_m": "Todos",
         "no_events_filters": "No hay eventos agrícolas para los filtros seleccionados.",
@@ -189,7 +190,15 @@ UI_TEXT = {
         "no_gpt_log": "No hay entradas recientes del log GPT.",
         "sample_data": "Datos demostrativos",
         "future_integration": "Integración real pendiente",
-        "camera_note": "Recomendación: tomar fotos desde el mismo ángulo, misma cama y mismo periodo mensual."
+        "camera_note": "Recomendación: tomar fotos desde el mismo ángulo, misma cama y mismo periodo mensual.",
+        "rain_reference": "Referencia climática",
+        "rain_reference_text": "Lluvia semanal: baja < 10 mm, media 10–40 mm, alta > 40 mm. Poco sol: menos de 21 h por semana o menos de 3 h promedio por día.",
+        "bed_photo_pending": "Foto pendiente",
+        "same_frame": "Encuadre estándar",
+        "bed_visual_reference": "Referencia visual reducida",
+        "history": "Historial",
+        "no_history": "Sin historial registrado",
+        "app_reboot_note": "Si no actualiza, usar Manage app → Reboot app."
     },
     "en": {
         "app_title": "Finca OS Dev",
@@ -257,6 +266,7 @@ UI_TEXT = {
         "no_upcoming_15": "No upcoming harvests in the next 15 days for the selected filters.",
         "no_min_month": "No crops with minimum harvest date in the selected month.",
         "event_type": "Event type",
+        "event_status": "Event status",
         "all_f": "All",
         "all_m": "All",
         "no_events_filters": "No agricultural events for the selected filters.",
@@ -320,7 +330,15 @@ UI_TEXT = {
         "no_gpt_log": "No recent GPT log entries.",
         "sample_data": "Demo data",
         "future_integration": "Real integration pending",
-        "camera_note": "Recommendation: take photos from the same angle, same bed and same monthly period."
+        "camera_note": "Recommendation: take photos from the same angle, same bed and same monthly period.",
+        "rain_reference": "Climate reference",
+        "rain_reference_text": "Weekly rain: low < 10 mm, medium 10–40 mm, high > 40 mm. Low sun: less than 21 h per week or less than 3 h average per day.",
+        "bed_photo_pending": "Photo pending",
+        "same_frame": "Standard frame",
+        "bed_visual_reference": "Reduced visual reference",
+        "history": "History",
+        "no_history": "No history recorded",
+        "app_reboot_note": "If it does not update, use Manage app → Reboot app."
     }
 }
 
@@ -642,6 +660,23 @@ st.markdown(
 .reco-card {background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:10px 12px;margin-bottom:8px;color:#14532d;font-weight:800;}
 .bed-image-caption {font-size:12px;color:#d1fae5;font-weight:800;margin:6px 0 10px 0;}
 
+.bed-thumb-wrap {display:flex; align-items:center; gap:10px; margin:4px 0 10px 0;}
+.bed-thumb {width:20%; max-width:145px; min-width:92px; height:78px; object-fit:cover; border-radius:12px; border:1px solid rgba(255,255,255,.58); box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.bed-thumb-placeholder {width:20%; max-width:145px; min-width:92px; height:78px; border-radius:12px; border:1px dashed rgba(255,255,255,.58); display:flex; align-items:center; justify-content:center; color:#d1fae5; font-size:24px; background:rgba(255,255,255,.08);}
+.bed-thumb-text {font-size:12px; color:#d1fae5; font-weight:800;}
+.history-table {width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; overflow:hidden; border-radius:10px;}
+.history-table th {background:#ecfdf5; color:#166534; text-align:left; padding:5px 6px; font-weight:950;}
+.history-table td {border-top:1px solid #d1fae5; padding:5px 6px; color:#334155; font-weight:750; vertical-align:top;}
+.history-table .datecol {white-space:nowrap; color:#0f3d25; font-weight:950;}
+.progress-grid {display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;}
+.progress-card {background:rgba(255,255,255,.95); border:1px solid rgba(255,255,255,.72); border-radius:16px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.14); color:#0f172a;}
+.progress-frame {width:100%; aspect-ratio:4 / 3; border-radius:12px; overflow:hidden; background:#e5e7eb; border:1px solid #dbe7de; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:950;}
+.progress-frame img {width:100%; height:100%; object-fit:cover; display:block;}
+.progress-title {font-size:14px; font-weight:950; color:#0f3d25; margin-top:8px;}
+.progress-meta {font-size:12px; color:#64748b; font-weight:750;}
+.weather-reference {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-weight:800; margin:8px 0 12px 0;}
+
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -810,6 +845,16 @@ def asset_path(name):
     return None
 
 
+def img_data_uri(name):
+    import base64, mimetypes
+    path = asset_path(name)
+    if not path:
+        return None
+    mime = mimetypes.guess_type(path)[0] or "image/jpeg"
+    data = Path(path).read_bytes()
+    return f"data:{mime};base64," + base64.b64encode(data).decode("utf-8")
+
+
 def bed_photo_for(unit_name):
     u = str(unit_name).lower()
     if "6" in u:
@@ -895,6 +940,19 @@ def history_summary_html(events, target_id):
     counts = subset.groupby("_key").size().sort_values(ascending=False)
     pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
     return f'<div class="history-line">{t("history_year")}: {pills}</div>'
+
+def history_table_html(events, target_id, limit=5):
+    subset = completed_events_for_target(events, target_id)
+    if subset.empty:
+        return f'<div class="history-line"><b>{t("history")}:</b> {t("no_history")}</div>'
+    subset = subset.sort_values("_date", ascending=True).tail(limit)
+    rows = []
+    for _, r in subset.iterrows():
+        fecha = pd.to_datetime(r.get("_date")).strftime("%d/%m/%Y") if pd.notna(r.get("_date")) else ""
+        evento = tv(r.get("Tipo_Evento", ""))
+        insumo = r.get("Nombre_Insumo", "") or t("no_input")
+        rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td></tr>')
+    return f'<table class="history-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
 
 
 def insumo_metadata(insumos, insumo_id=None, nombre=None):
@@ -1094,38 +1152,54 @@ def render_gpt_log_panel(log_gpt):
 
 def render_weather_view():
     st.markdown(f'<div class="section-title">☁️ {t("climate")}</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1,1,1.4])
+    c1, c2, c3 = st.columns([1, 1, 1.6])
     with c1:
-        st.radio(t("period"), [t("weekly"), t("monthly")], horizontal=True)
+        st.radio(t("period"), [t("weekly"), t("monthly")], index=0, horizontal=True, key="weather_period")
     with c2:
-        finca = st.radio(t("farm"), ["Moravia", "Frailes", t("both")], horizontal=True)
+        finca = st.radio(t("farm"), ["Frailes", "Moravia"], index=0, horizontal=True, key="weather_farm")
     with c3:
         st.selectbox(t("week"), ["12 – 18 mayo 2025", "19 – 25 mayo 2025", "26 mayo – 1 junio 2025"], key="weather_week")
 
-    mock = {"Moravia": {"rain": 28.4, "sun": 32.1, "days": 3, "temp": 24.3}, "Frailes": {"rain": 68.7, "sun": 18.6, "days": 5, "temp": 22.1}}
-    farms = ["Moravia", "Frailes"] if finca == t("both") else [finca]
+    html_block(f'<div class="weather-reference"><b>{t("rain_reference")}:</b> {t("rain_reference_text")}</div>')
+
+    mock = {
+        "Moravia": {"rain": 28.4, "sun": 32.1, "days": 3, "temp": 24.3},
+        "Frailes": {"rain": 68.7, "sun": 18.6, "days": 5, "temp": 22.1},
+    }
     cols = st.columns(4)
-    metrics = [("🌧️", t("rain_7_days"), "rain", "mm"), ("☀️", t("sun_hours"), "sun", "h"), ("☔", t("rainy_days"), "days", ""), ("🌡️", t("avg_temp"), "temp", "°C")]
+    metrics = [
+        ("🌧️", t("rain_7_days"), "rain", "mm"),
+        ("☀️", t("sun_hours"), "sun", "h"),
+        ("☔", t("rainy_days"), "days", ""),
+        ("🌡️", t("avg_temp"), "temp", "°C"),
+    ]
     for col, (icon, label, key, suffix) in zip(cols, metrics):
         with col:
-            details = " · ".join([f"{f}: {mock[f][key]}{suffix}" for f in farms])
-            html_block(f'<div class="weather-card"><div class="weather-title">{icon} {label}</div><div class="weather-value">{mock[farms[0]][key]}{suffix}</div><div class="weather-note">{details}</div></div>')
+            value = mock[finca][key]
+            html_block(f'<div class="weather-card"><div class="weather-title">{icon} {label}</div><div class="weather-value">{value}{suffix}</div><div class="weather-note">{finca}</div></div>')
 
-    left, mid, right = st.columns([1.2,1.1,1])
-    days = [("LUN 12", "🌧️", "6.8 mm", "2.1 h", "lluvia media"), ("MAR 13", "🌤️", "1.2 mm", "6.3 h", "nublado parcial"), ("MIÉ 14", "🌤️", "0.0 mm", "5.8 h", "soleado"), ("JUE 15", "🌧️", "12.6 mm", "1.4 h", "lluvia alta"), ("VIE 16", "🌧️", "6.3 mm", "2.0 h", "lluvia media"), ("SÁB 17", "☀️", "0.0 mm", "8.2 h", "soleado"), ("DOM 18", "🌤️", "1.5 mm", "6.3 h", "nublado parcial")]
+    days_by_farm = {
+        "Frailes": [("LUN 12", "🌧️", "14.8 mm", "1.7 h", "lluvia alta"), ("MAR 13", "🌧️", "8.4 mm", "2.1 h", "lluvia media"), ("MIÉ 14", "🌧️", "18.2 mm", "1.2 h", "lluvia alta"), ("JUE 15", "🌧️", "11.6 mm", "1.6 h", "lluvia alta"), ("VIE 16", "🌦️", "7.5 mm", "2.8 h", "lluvia media"), ("SÁB 17", "🌤️", "2.2 mm", "4.5 h", "parcial"), ("DOM 18", "🌧️", "6.0 mm", "4.7 h", "lluvia media")],
+        "Moravia": [("LUN 12", "🌧️", "6.8 mm", "2.1 h", "lluvia media"), ("MAR 13", "🌤️", "1.2 mm", "6.3 h", "nublado parcial"), ("MIÉ 14", "🌤️", "0.0 mm", "5.8 h", "soleado"), ("JUE 15", "🌧️", "12.6 mm", "1.4 h", "lluvia alta"), ("VIE 16", "🌧️", "6.3 mm", "2.0 h", "lluvia media"), ("SÁB 17", "☀️", "0.0 mm", "8.2 h", "soleado"), ("DOM 18", "🌤️", "1.5 mm", "6.3 h", "nublado parcial")],
+    }
+
+    st.markdown(f"### {t('current_week')} · {finca}")
+    dcols = st.columns(7)
+    for c, d in zip(dcols, days_by_farm[finca]):
+        with c:
+            html_block(f'<div class="weather-day"><b>{d[0]}</b><div class="weather-icon">{d[1]}</div><div>{d[2]}</div><div>{d[3]}</div><small>{d[4]}</small></div>')
+
+    left, right = st.columns([1.35, 1])
     with left:
-        st.markdown(f"### {t('current_week')}")
-        dcols = st.columns(7)
-        for c, d in zip(dcols, days):
-            with c:
-                html_block(f'<div class="weather-day"><b>{d[0]}</b><div class="weather-icon">{d[1]}</div><div>{d[2]}</div><div>{d[3]}</div><small>{d[4]}</small></div>')
-    with mid:
         st.markdown(f"### {t('monthly_summary')}")
         chart_data = pd.DataFrame({"Moravia": [24, 13, 37, 18, 28], "Frailes": [54, 31, 82, 45, 69]}, index=["14-20 abr", "21-27 abr", "28 abr-4 may", "5-11 may", "12-18 may"])
-        st.bar_chart(chart_data)
+        st.bar_chart(chart_data[[finca]])
     with right:
         st.markdown(f"### {t('weekly_recommendation')}")
-        recos = ["Frailes: postergar abono foliar por lluvia acumulada alta.", "Moravia: ventana favorable para control fitosanitario.", "Revisar riego si la lluvia semanal es baja.", "Vigilar hongos tras varios días húmedos."]
+        if finca == "Frailes":
+            recos = ["Postergar abono foliar por lluvia acumulada alta.", "Vigilar hongos por varios días húmedos.", "Revisar drenaje y evitar riego adicional."]
+        else:
+            recos = ["Ventana favorable para control fitosanitario si hay 24h sin lluvia.", "Revisar riego solo si baja la humedad del sustrato.", "Buen periodo para observación sanitaria."]
         for r in recos:
             html_block(f'<div class="reco-card">{r}</div>')
     html_block(f'<div class="dash-panel"><div class="dash-line"><b>{t("sample_data")}.</b> {t("future_integration")}.</div></div>')
@@ -1134,19 +1208,35 @@ def render_weather_view():
 def render_progress_view():
     st.markdown(f'<div class="section-title">📷 {t("progress")}</div>', unsafe_allow_html=True)
     html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("photo_progress")}</div><div class="dash-line">{t("photo_progress_help")}</div><div class="dash-line"><span class="dash-pill pill-blue">Tip</span>{t("camera_note")}</div></div>')
-    records = [("Frailes · Vista general", "Mayo 2025", "vista_sur.jpeg"), ("Frailes · Cama 6", "Junio 2025", "cama_6_y_3.jpeg"), ("Frailes · Vista este", "Junio 2025", "vista_este.jpeg")]
-    cols = st.columns(3)
-    for col, (title, month, img) in zip(cols, records):
-        with col:
-            path = asset_path(img)
-            if path:
-                st.image(path, use_container_width=True)
-            html_block(f'<div class="photo-card"><div class="photo-title">{title}</div><div class="photo-note">{month}</div></div>')
+
+    photo_map = {
+        "Cama 1": ("vista_este.jpeg", "Julio 2025"),
+        "Cama 2": (None, "Pendiente"),
+        "Cama 3": ("cama_6_y_3.jpeg", "Julio 2025"),
+        "Cama 4": (None, "Pendiente"),
+        "Cama 5": (None, "Pendiente"),
+        "Cama 6": ("cama_6_y_3.jpeg", "Julio 2025"),
+        "Cama 7": ("vista_sur.jpeg", "Julio 2025"),
+    }
+    cards = ['<div class="progress-grid">']
+    for cama, (img, periodo) in photo_map.items():
+        uri = img_data_uri(img) if img else None
+        if uri:
+            frame = f'<div class="progress-frame"><img src="{uri}"></div>'
+        else:
+            frame = f'<div class="progress-frame">📷<br>{t("bed_photo_pending")}</div>'
+        cards.append(f'<div class="progress-card">{frame}<div class="progress-title">{cama}</div><div class="progress-meta">{periodo} · {t("same_frame")}</div></div>')
+    cards.append('</div>')
+    html_block(''.join(cards))
+
     uploaded = st.file_uploader(t("upload_new_photo"), type=["png", "jpg", "jpeg"], accept_multiple_files=True)
     if uploaded:
         st.write(f"{len(uploaded)} archivo(s) cargado(s) para vista previa. Persistencia real pendiente de integrar.")
-        for file in uploaded[:3]:
-            st.image(file, caption=file.name, use_container_width=True)
+        cols = st.columns(3)
+        for col, file in zip(cols, uploaded[:3]):
+            with col:
+                st.image(file, caption=file.name, use_container_width=True)
+
 
 def crop_card(row, idx, events=None):
     crop = row["Cultivo"]
@@ -1222,10 +1312,15 @@ def bed_panel(unit_row, crops_df, events=None):
         )
         photo_path, photo_caption = bed_photo_for(unidad)
         if photo_path:
-            st.image(photo_path, use_container_width=True)
-            st.markdown(f'<div class="bed-image-caption">📷 {photo_caption}</div>', unsafe_allow_html=True)
+            import base64, mimetypes
+            mime = mimetypes.guess_type(photo_path)[0] or "image/jpeg"
+            uri = "data:" + mime + ";base64," + base64.b64encode(Path(photo_path).read_bytes()).decode("utf-8")
+            st.markdown(
+                f'<div class="bed-thumb-wrap"><img class="bed-thumb" src="{uri}"><div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}</div></div>',
+                unsafe_allow_html=True,
+            )
         else:
-            st.markdown(f'<div class="bed-image-caption">📷 {photo_caption}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="bed-thumb-wrap"><div class="bed-thumb-placeholder">📷</div><div class="bed-thumb-text">{t("bed_photo_pending")}</div></div>', unsafe_allow_html=True)
         if str(unit_row.get("Estado_Unidad", "")).lower().startswith("no activa"):
             st.markdown(f'<div class="empty-card">{tv("No activa")}</div>', unsafe_allow_html=True)
             return
@@ -1241,24 +1336,28 @@ def bed_panel(unit_row, crops_df, events=None):
                     crop_card(row, idx, events)
 
 
-def app_week_number(d):
-    # Semana 1 empieza el 1 de enero y sigue cada 7 días: semana del 01 de enero = semana 1.
-    return ((d - date(d.year, 1, 1)).days // 7) + 1
-
-
-def week_range_for_number(year, week_number):
-    start = date(year, 1, 1) + pd.Timedelta(days=(week_number - 1) * 7)
-    end = start + pd.Timedelta(days=6)
-    return start, end
-
-
-def month_week_numbers(year, month):
+def month_calendar_weeks(year, month):
+    # Weeks are always Monday to Sunday. The first week shown for a month
+    # starts on the Monday that contains day 1 of that month.
     first = date(year, month, 1)
     last = date(year, month, calendar.monthrange(year, month)[1])
-    start_week = app_week_number(first)
-    end_week = app_week_number(last)
-    return list(range(start_week, end_week + 1))
+    start = first - timedelta(days=first.weekday())
+    end = last + timedelta(days=(6 - last.weekday()))
+    weeks = []
+    cur = start
+    while cur <= end:
+        weeks.append((cur, cur + timedelta(days=6)))
+        cur += timedelta(days=7)
+    return weeks
 
+
+def week_number_for_month(year, month, week_start):
+    first_week_start = date(year, month, 1) - timedelta(days=date(year, month, 1).weekday())
+    return ((week_start - first_week_start).days // 7) + 1
+
+
+def week_start_for_date(d):
+    return d - timedelta(days=d.weekday())
 
 def event_status(row):
     if pd.isna(row["Cosecha_Min"]):
@@ -1353,11 +1452,9 @@ def render_calendar_view(all_df):
         # Default: todos los cultivos activos ubicados por Cosecha_Min en el mes seleccionado.
         calendar_df = calendar_df[month_mask]
 
+    weeks = month_calendar_weeks(selected_year, selected_month)
     if not calendar_df.empty:
-        calendar_df["Week_Num"] = calendar_df["Cosecha_Date"].apply(app_week_number)
-        week_nums = sorted(calendar_df["Week_Num"].unique().tolist())
-    else:
-        week_nums = []
+        calendar_df["Week_Start"] = calendar_df["Cosecha_Date"].apply(week_start_for_date)
 
     def build_event_html(row):
         crop = row["Cultivo"]
@@ -1377,22 +1474,28 @@ def render_calendar_view(all_df):
         )
 
 
-    for start in range(0, len(week_nums), 4):
+    any_events = False
+    for start in range(0, len(weeks), 4):
         cols = st.columns(4)
-        for col, week_num in zip(cols, week_nums[start:start + 4]):
+        for col, (week_start, week_end) in zip(cols, weeks[start:start + 4]):
             with col:
-                week_start, week_end = week_range_for_number(selected_year, int(week_num))
-                events = calendar_df[calendar_df["Week_Num"] == week_num].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
+                if calendar_df.empty:
+                    events = calendar_df
+                else:
+                    events = calendar_df[calendar_df["Week_Start"] == week_start].sort_values(["Cosecha_Min", "Finca", "Unidad", "Cultivo"])
+                if not events.empty:
+                    any_events = True
                 events_html = "".join(build_event_html(row) for _, row in events.iterrows())
                 if not events_html:
                     events_html = f'<div class="no-events">{t("no_available_harvest")}</div>'
+                week_num = week_number_for_month(selected_year, selected_month, week_start)
                 html_block(
                     f'<div class="week-card"><div class="week-title">{t("week")} {int(week_num)}</div>'
-                    f'<div class="week-range">{week_start.strftime("%d %b")} – {week_end.strftime("%d %b")}</div>'
+                    f'<div class="week-range">{week_start.strftime("%d %b %Y")} – {week_end.strftime("%d %b %Y")}</div>'
                     f'{events_html}</div>'
                 )
 
-    if len(week_nums) == 0:
+    if not any_events:
         msg = t("no_upcoming_15") if only_soon else t("no_min_month")
         html_block(f'<div class="calendar-toolbar"><div class="calendar-note">{msg}</div></div>')
 
@@ -1437,7 +1540,7 @@ def health_class(value):
 
 def render_tree_card(row, events=None, insumos=None):
     control_html = control_status_html(latest_control_status(events, row.get("Arbol_ID")))
-    history_html = history_summary_html(events, row.get("Arbol_ID"))
+    history_html = history_table_html(events, row.get("Arbol_ID"))
     next_abono_html = next_soil_abono_html(events, insumos, row.get("Arbol_ID"), row.get("Estado_Fenologico", ""))
     st.markdown(f"""
     <div class="tree-card">
@@ -1594,7 +1697,7 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 22.0</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 23.2</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-11</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
