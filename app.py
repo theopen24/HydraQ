@@ -945,25 +945,36 @@ def bed_photo_for(unit_name):
 
 
 def normalized_tree_icon(row):
-    name = str(row.get("Arbol", "")).lower()
-    if "manzano" in name or "manzana" in name:
-        return "🍎"
-    if "limón" in name or "limon" in name:
-        return "🍋"
-    if "naranja" in name or "mandarina" in name:
-        return "🍊"
-    if "mango" in name or "manga" in name:
-        return "🥭"
-    if "durazno" in name:
-        return "🌸"
-    if "banano" in name or "plátano" in name or "platano" in name:
-        return "🍌"
-    icon = str(row.get("Icono", "") or "🌳").strip()
-    for candidate in ["🍎", "🍋", "🍊", "🥭", "🌸", "🍌", "🌳"]:
+    name = str(row.get("Arbol", "")).lower().strip()
+
+    # Íconos diferenciados por especie. Solo comparten icono cuando claramente son la misma familia/grupo práctico.
+    icon_map = [
+        (["manzano", "manzana"], "🍎"),
+        (["naranja washington", "naranja valencia", "naranja"], "🍊"),
+        (["mandarina"], "🍊"),
+        (["limón", "limon"], "🍋"),
+        (["mango", "manga"], "🥭"),
+        (["durazno"], "🍑"),
+        (["guanábana", "guanabana"], "🍈"),
+        (["anona"], "🟤"),
+        (["cas"], "🟡"),
+        (["guayabita"], "🟣"),
+        (["guayaba"], "🟢"),
+        (["níspero", "nispero"], "🟠"),
+        (["mamón chino", "mamon chino"], "🔴"),
+        (["carambola"], "⭐"),
+        (["banano", "plátano", "platano"], "🍌"),
+        (["yuplón", "yuplon"], "🟢"),
+    ]
+    for keys, emoji in icon_map:
+        if any(k in name for k in keys):
+            return emoji
+
+    icon = str(row.get("Icono", "") or "").strip()
+    for candidate in ["🍎", "🍊", "🍋", "🥭", "🍑", "🍈", "🟤", "🟡", "🟣", "🟢", "🟠", "🔴", "⭐", "🍌", "🌳"]:
         if candidate in icon:
             return candidate
     return "🌳"
-
 
 def event_effective_date(row):
     if pd.notna(row.get("Fecha_Programada")):
@@ -1842,6 +1853,7 @@ def render_dosis_view(insumos):
         tipo.str.contains("control|foliar|coadyuv", na=False)
         & ~dosis.str.contains("no aplica", na=False)
         & dosis.str.strip().ne("")
+        & ~dosis.str.contains("pendiente", na=False)
     )
     liquid_rows = df_ins[liquid_mask].copy()
 
@@ -1854,17 +1866,17 @@ def render_dosis_view(insumos):
             dose_l = _txt(r.get("Dosis_Por_Litro"), t("according_criteria"))
             source = _txt(r.get("Fuente_Dosis"), "")
             note = _txt(r.get("Notas_Dosis"), "")
-            cards.append(f'''
-            <div class="dose-card">
-                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
-                <span class="dose-chip">{_txt(r.get("Tipo"))}</span>
-                <div class="dose-line"><b>{t("dose_per_liter")}:</b> {dose_l}</div>
-                <div class="dose-note"><b>{t("source_note")}:</b> {source}</div>
-                <div class="dose-note">{note}</div>
-            </div>
-            ''')
+            cards.append(
+                '<div class="dose-card">'
+                f'<div class="dose-name">{_txt(r.get("Nombre"))}</div>'
+                f'<span class="dose-chip">{_txt(r.get("Tipo"))}</span>'
+                f'<div class="dose-line"><b>{t("dose_per_liter")}:</b> {dose_l}</div>'
+                f'<div class="dose-note"><b>{t("source_note")}:</b> {source}</div>'
+                f'<div class="dose-note">{note}</div>'
+                '</div>'
+            )
         cards.append('</div>')
-        html_block(''.join(cards))
+        st.markdown(''.join(cards), unsafe_allow_html=True)
 
     st.markdown(f'<div class="dose-section-title">{t("yaramila_tree_reference")}</div>', unsafe_allow_html=True)
     ymask = df_ins.get("Nombre", "").astype(str).str.lower().str.contains("yaramila", na=False)
@@ -1874,20 +1886,19 @@ def render_dosis_view(insumos):
     else:
         cards = ['<div class="dose-grid">']
         for _, r in y_rows.iterrows():
-            cards.append(f'''
-            <div class="dose-card">
-                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
-                <span class="dose-chip">{_txt(r.get("Tipo_Dosis"), "Por árbol / corona")}</span>
-                <div class="dose-line"><b>{t("guide_qty")}:</b> {_txt(r.get("Cantidad_Guia"), t("according_criteria"))}</div>
-                <div class="dose-line"><b>{t("frequency")}:</b> {_txt(r.get("Frecuencia_Dias"), t("no_rule"))} días</div>
-                <div class="dose-line"><b>{t("timing")}:</b> {_txt(r.get("Momento_Aplicacion"), t("according_state"))}</div>
-                <div class="dose-note"><b>{t("source_note")}:</b> {_txt(r.get("Fuente_Dosis"), "Referencia interna FincaOS")}</div>
-                <div class="dose-note">{_txt(r.get("Notas_Dosis"), "")}</div>
-            </div>
-            ''')
+            cards.append(
+                '<div class="dose-card">'
+                f'<div class="dose-name">{_txt(r.get("Nombre"))}</div>'
+                f'<span class="dose-chip">{_txt(r.get("Tipo_Dosis"), "Por árbol / corona")}</span>'
+                f'<div class="dose-line"><b>{t("guide_qty")}:</b> {_txt(r.get("Cantidad_Guia"), t("according_criteria"))}</div>'
+                f'<div class="dose-line"><b>{t("frequency")}:</b> {_txt(r.get("Frecuencia_Dias"), t("no_rule"))} días</div>'
+                f'<div class="dose-line"><b>{t("timing")}:</b> {_txt(r.get("Momento_Aplicacion"), t("according_state"))}</div>'
+                f'<div class="dose-note"><b>{t("source_note")}:</b> {_txt(r.get("Fuente_Dosis"), "Referencia interna FincaOS")}</div>'
+                f'<div class="dose-note">{_txt(r.get("Notas_Dosis"), "")}</div>'
+                '</div>'
+            )
         cards.append('</div>')
-        html_block(''.join(cards))
-
+        st.markdown(''.join(cards), unsafe_allow_html=True)
 
 def render_account_view():
     st.markdown("""
@@ -1927,7 +1938,7 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 28</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 29</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-12</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
