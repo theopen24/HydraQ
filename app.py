@@ -419,7 +419,25 @@ UI_TEXT['es'].update({
     'dose_per_liter':'Dosis por litro',
     'dose_per_20l':'Dosis por bomba 20 L',
     'source_note':'Nota / fuente',
-    'reference_only':'Referencia operativa; validar etiqueta del producto antes de aplicar.'
+    'reference_only':'Referencia operativa; validar etiqueta del producto antes de aplicar.',
+    'event_history':'Historial de Eventos',
+    'whats_next':'Qué hay y qué viene',
+    'whats_next_title':'Qué hay y qué viene / Próximas acciones',
+    'whats_next_help':'Esta vista muestra solo eventos futuros desplegados en las próximas 4 semanas a partir de hoy. Para historia de eventos, usar Historial de Eventos o la base de datos.',
+    'event_type_filter':'Tipo de evento',
+    'showing_last_events':'Mostrando las últimas 50 entradas de {total} eventos registrados. Los eventos futuros se resaltan en verde. Para análisis histórico completo usar la base de datos.',
+    'input_section':'Insumos',
+    'input_section_help':'Catálogo operativo de insumos, dosis por litro y notas de uso en campo.',
+    'no_future_events_4w':'No hay eventos futuros programados para las próximas 4 semanas según los filtros actuales.',
+    'objective':'Objetivo',
+    'notes_col':'Notas',
+    'all_option':'Todos',
+    'event_kind_harvest':'🥬 Cosecha',
+    'event_kind_fito':'🛡️ Fitosanitario',
+    'event_kind_abono':'🧪 Abono / foliar',
+    'event_kind_poda':'✂️ Poda / manejo',
+    'event_kind_riego':'💧 Riego',
+    'event_kind_otro':'📌 Otro',
 })
 UI_TEXT['en'].update({
     'general_info':'General information',
@@ -439,7 +457,25 @@ UI_TEXT['en'].update({
     'dose_per_liter':'Dose per liter',
     'dose_per_20l':'Dose per 20 L sprayer',
     'source_note':'Note / source',
-    'reference_only':'Operational reference; validate product label before applying.'
+    'reference_only':'Operational reference; validate product label before applying.',
+    'event_history':'Event History',
+    'whats_next':'What is next',
+    'whats_next_title':'What is next / Upcoming actions',
+    'whats_next_help':'This view only shows future events scheduled over the next 4 weeks from today. For event history, use Event History or the database.',
+    'event_type_filter':'Event type',
+    'showing_last_events':'Showing the latest 50 entries out of {total} registered events. Future events are highlighted in green. For full historical analysis, use the database.',
+    'input_section':'Inputs',
+    'input_section_help':'Operational input catalog, dose per liter and field-use notes.',
+    'no_future_events_4w':'There are no future events scheduled for the next 4 weeks with the current filters.',
+    'objective':'Target',
+    'notes_col':'Notes',
+    'all_option':'All',
+    'event_kind_harvest':'🥬 Harvest',
+    'event_kind_fito':'🛡️ Pest control',
+    'event_kind_abono':'🧪 Fertilization / foliar',
+    'event_kind_poda':'✂️ Pruning / management',
+    'event_kind_riego':'💧 Irrigation',
+    'event_kind_otro':'📌 Other',
 })
 
 st.markdown(
@@ -787,6 +823,10 @@ st.markdown(
 .event-table tr.future-row td {background:#ecfdf5; color:#064e3b;}
 .event-table tr.future-row td:first-child {border-left:5px solid #22c55e;}
 .input-section-title {font-size:24px; font-weight:950; color:#ffffff; margin:18px 0 12px 0;}
+
+
+.calendar-filter-title {font-size:13px; color:#d1fae5; font-weight:900; margin:8px 0 2px 0;}
+div[data-testid="stCheckbox"] label {font-size:12px !important; font-weight:800 !important;}
 
 </style>
 """,
@@ -1591,12 +1631,12 @@ def calendar_event_card(row):
 
 def calendar_type_label(kind):
     labels = {
-        "harvest": "🥬 Cosecha",
-        "fito": "🛡️ Fitosanitario",
-        "abono": "🧪 Abono / foliar",
-        "poda": "✂️ Poda / manejo",
-        "riego": "💧 Riego",
-        "otro": "📌 Otro",
+        "harvest": t("event_kind_harvest"),
+        "fito": t("event_kind_fito"),
+        "abono": t("event_kind_abono"),
+        "poda": t("event_kind_poda"),
+        "riego": t("event_kind_riego"),
+        "otro": t("event_kind_otro"),
     }
     return labels.get(kind, kind)
 
@@ -1649,12 +1689,8 @@ def render_calendar_view(all_df, events=None, trees=None):
     today = date.today()
     end_date = today + timedelta(days=27)
 
-    st.markdown('<div class="section-title">📅 Qué hay y qué viene / Próximas acciones</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="calendar-help">Esta vista muestra solo eventos futuros desplegados en las próximas 4 semanas a partir de hoy. '
-        'Para historia de eventos, usar Historial de Eventos o la base de datos.</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'<div class="section-title">📅 {t("whats_next_title")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="calendar-help">{t("whats_next_help")}</div>', unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1.15, 1.15, 1.7])
     crop_options = [t("all_m")] + sorted([x for x in all_df["Cultivo"].dropna().unique() if x and x != "Disponible"])
@@ -1669,22 +1705,22 @@ def render_calendar_view(all_df, events=None, trees=None):
     with c3:
         cal_arbol = st.selectbox(t("trees"), tree_options, key="cal_arbol")
 
+    st.markdown(f'<div class="calendar-filter-title">{t("event_type_filter")}</div>', unsafe_allow_html=True)
     type_options = ["harvest", "fito", "abono", "poda", "riego", "otro"]
-    selected_types = st.multiselect(
-        "Filtrar por tipo de evento",
-        type_options,
-        default=type_options,
-        format_func=calendar_type_label,
-        key="cal_event_types",
-    )
+    type_cols = st.columns(6)
+    selected_types = []
+    for col, kind in zip(type_cols, type_options):
+        with col:
+            if st.checkbox(calendar_type_label(kind), value=True, key=f"cal_type_{kind}"):
+                selected_types.append(kind)
 
     st.markdown(
         '<div class="calendar-legend">'
-        '<span class="legend-pill"><span class="legend-dot" style="background:#16a34a;"></span>🥬 Cosecha</span>'
-        '<span class="legend-pill"><span class="legend-dot" style="background:#dc2626;"></span>🛡️ Fitosanitario</span>'
-        '<span class="legend-pill"><span class="legend-dot" style="background:#ca8a04;"></span>🧪 Abono / foliar</span>'
-        '<span class="legend-pill"><span class="legend-dot" style="background:#7c3aed;"></span>✂️ Poda / manejo</span>'
-        '<span class="legend-pill"><span class="legend-dot" style="background:#0284c7;"></span>💧 Riego</span>'
+        f'<span class="legend-pill"><span class="legend-dot" style="background:#16a34a;"></span>{t("event_kind_harvest")}</span>'
+        f'<span class="legend-pill"><span class="legend-dot" style="background:#dc2626;"></span>{t("event_kind_fito")}</span>'
+        f'<span class="legend-pill"><span class="legend-dot" style="background:#ca8a04;"></span>{t("event_kind_abono")}</span>'
+        f'<span class="legend-pill"><span class="legend-dot" style="background:#7c3aed;"></span>{t("event_kind_poda")}</span>'
+        f'<span class="legend-pill"><span class="legend-dot" style="background:#0284c7;"></span>{t("event_kind_riego")}</span>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1752,7 +1788,7 @@ def render_calendar_view(all_df, events=None, trees=None):
                 "tipo": tipo_evt,
                 "kind": kind,
                 "titulo": target,
-                "meta": f'{_txt(r.get("Finca"), "")} · {_txt(r.get("Target_Tipo"), "")}',
+                "meta": f'{_txt(r.get("Finca"), "")} · {tv(_txt(r.get("Target_Tipo"), ""))}',
                 "extra": f'{t("input")}: {insumo}',
             })
 
@@ -1784,14 +1820,13 @@ def render_calendar_view(all_df, events=None, trees=None):
 
             iso_year, iso_week, _ = week_start.isocalendar()
             html_block(
-                f'<div class="week-card"><div class="week-title">Semana {iso_week:02d}</div>'
+                f'<div class="week-card"><div class="week-title">{t("week")} {iso_week:02d}</div>'
                 f'<div class="week-range">{week_start.strftime("%d %b %Y")} – {week_end.strftime("%d %b %Y")}</div>'
                 f'{html}</div>'
             )
 
     if not any_events:
-        html_block('<div class="calendar-toolbar"><div class="calendar-note">No hay eventos futuros programados para las próximas 4 semanas según los filtros actuales.</div></div>')
-
+        html_block(f'<div class="calendar-toolbar"><div class="calendar-note">{t("no_future_events_4w")}</div></div>')
 
 def phen_class(value):
     v = str(value).lower()
@@ -1873,7 +1908,7 @@ def render_arboles_view(trees, events, insumos):
 
 
 def render_eventos_view(events, insumos):
-    st.markdown('<div class="section-title">🧾 Historial de Eventos</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">🧾 {t("event_history")}</div>', unsafe_allow_html=True)
     if events is None or events.empty:
         st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{t("no_events_filters")}</div></div>', unsafe_allow_html=True)
         return
@@ -1887,13 +1922,12 @@ def render_eventos_view(events, insumos):
     latest = df_events.sort_values("_date_sort", ascending=False, na_position="last").head(50).copy()
 
     st.markdown(
-        f'<div class="event-summary-note">Mostrando las últimas 50 entradas de {total_events} eventos registrados. '
-        'Los eventos futuros se resaltan en verde. Para análisis histórico completo usar la base de datos.</div>',
+        f'<div class="event-summary-note">{t("showing_last_events").format(total=total_events)}</div>',
         unsafe_allow_html=True,
     )
 
     rows = ['<table class="event-table compact"><thead><tr>'
-            f'<th>{t("date")}</th><th>{t("event_type")}</th><th>Objetivo</th><th>{t("farm")}</th><th>{t("input")}</th><th>{t("event_status")}</th><th>Notas</th>'
+            f'<th>{t("date")}</th><th>{t("event_type")}</th><th>{t("objective")}</th><th>{t("farm")}</th><th>{t("input")}</th><th>{t("event_status")}</th><th>{t("notes_col")}</th>'
             '</tr></thead><tbody>']
     for _, r in latest.iterrows():
         fecha_txt = fmt_date(r.get("_date")) if pd.notna(r.get("_date")) else t("date_none")
@@ -1916,8 +1950,8 @@ def render_eventos_view(events, insumos):
 
 
 def render_insumos_view(insumos):
-    st.markdown('<div class="section-title">🧴 Insumos</div>', unsafe_allow_html=True)
-    st.markdown('<div class="event-summary-note">Catálogo operativo de insumos, dosis por litro y notas de uso en campo.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">🧴 {t("input_section")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="event-summary-note">{t("input_section_help")}</div>', unsafe_allow_html=True)
     if insumos is None or insumos.empty:
         st.write(t("no_inputs"))
         return
@@ -2058,7 +2092,7 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 31</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 32</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-12</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
@@ -2107,7 +2141,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_insumos, tab_dosis, tab_proximas, tab_clima, tab_avance, tab_cuenta = st.tabs(["📊 Dashboard", "🛏️ Camas", "🌳 Árboles", "🧾 Historial de Eventos", "🧴 Insumos", "📏 Dosis", "📅 Qué hay y qué viene", "☁️ Clima", "📷 Avance", "👤 Cuenta"] )
+tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_insumos, tab_dosis, tab_proximas, tab_clima, tab_avance, tab_cuenta = st.tabs([f"📊 {t('dashboard')}", f"🛏️ {t('beds')}", f"🌳 {t('trees')}", f"🧾 {t('event_history')}", f"🧴 {t('input_section')}", f"📏 {t('doses')}", f"📅 {t('whats_next')}", f"☁️ {t('climate')}", f"📷 {t('progress')}", f"👤 {t('account')}"] )
 
 with tab_dashboard:
     render_dashboard_view(filtered, filtered_units, eventos, trees, log_gpt)
