@@ -399,6 +399,32 @@ def tv(value):
 def month_name(month_number):
     return (MONTHS_EN if lang_code() == "en" else MONTHS_ES).get(month_number, str(month_number))
 
+
+UI_TEXT['es'].update({
+    'general_info':'Información general',
+    'registered_events':'Eventos registrados',
+    'future_actions_notes':'Acciones futuras y notas',
+    'pending_actions':'Acciones programadas',
+    'no_pending_actions':'Sin acciones futuras programadas',
+    'notes':'Notas',
+    'no_notes':'Sin notas',
+    'current_event':'Evento agrícola',
+    'tree_history_help':'Historial cronológico más reciente',
+    'future_section_help':'Próximas acciones sugeridas y observaciones'
+})
+UI_TEXT['en'].update({
+    'general_info':'General information',
+    'registered_events':'Registered events',
+    'future_actions_notes':'Future actions and notes',
+    'pending_actions':'Scheduled actions',
+    'no_pending_actions':'No upcoming actions scheduled',
+    'notes':'Notes',
+    'no_notes':'No notes',
+    'current_event':'Agricultural event',
+    'tree_history_help':'Most recent chronological history',
+    'future_section_help':'Suggested next actions and observations'
+})
+
 st.markdown(
     """
 <style>
@@ -668,6 +694,16 @@ st.markdown(
 .history-table th {background:#ecfdf5; color:#166534; text-align:left; padding:5px 6px; font-weight:950;}
 .history-table td {border-top:1px solid #d1fae5; padding:5px 6px; color:#334155; font-weight:750; vertical-align:top;}
 .history-table .datecol {white-space:nowrap; color:#0f3d25; font-weight:950;}
+.tree-header {display:flex; align-items:center; gap:14px; margin-bottom:10px;}
+.tree-body {display:flex; flex-direction:column; gap:10px;}
+.tree-section {background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px;}
+.tree-subtitle {font-size:12px; font-weight:950; color:#0f3d25; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
+.tree-subnote {font-size:11px; color:#64748b; font-weight:750; margin:-2px 0 6px 0;}
+.pending-table {width:100%; border-collapse:collapse; margin-top:6px; font-size:11px;}
+.pending-table th {background:#eff6ff; color:#1d4ed8; text-align:left; padding:5px 6px; font-weight:950;}
+.pending-table td {border-top:1px solid #dbeafe; padding:5px 6px; color:#334155; font-weight:750; vertical-align:top;}
+.pending-note {font-size:12px; color:#334155; font-weight:750; margin-top:6px;}
+.notes-box {margin-top:8px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:8px 10px; color:#7c2d12; font-size:12px; font-weight:750;}
 .progress-grid {display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;}
 .progress-card {background:rgba(255,255,255,.95); border:1px solid rgba(255,255,255,.72); border-radius:16px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.14); color:#0f172a;}
 .progress-frame {width:100%; aspect-ratio:4 / 3; border-radius:12px; overflow:hidden; background:#e5e7eb; border:1px solid #dbe7de; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:950;}
@@ -800,7 +836,7 @@ def clean_trees(arboles):
         out["Arbol_ID"] = [f"ARB_{i:03d}" for i in range(len(out))]
     if "Arbol" not in out.columns and "Nombre" in out.columns:
         out["Arbol"] = out["Nombre"]
-    for col in ["Finca", "Arbol", "Icono", "Estado_Fenologico", "Trasplante", "Estado_Sanitario", "Evento_Agricola"]:
+    for col in ["Finca", "Arbol", "Icono", "Estado_Fenologico", "Trasplante", "Estado_Sanitario", "Evento_Agricola", "Notas"]:
         if col not in out.columns:
             out[col] = ""
         out[col] = out[col].fillna("N/A" if col == "Trasplante" else "").astype(str)
@@ -953,6 +989,41 @@ def history_table_html(events, target_id, limit=5):
         insumo = r.get("Nombre_Insumo", "") or t("no_input")
         rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td></tr>')
     return f'<table class="history-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+
+
+
+def pending_actions_html(events, target_id, limit=4):
+    if events is None or events.empty or not target_id:
+        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
+    subset = events[events['Target_ID'].astype(str) == str(target_id)].copy()
+    if subset.empty:
+        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
+    subset['_date'] = subset.apply(event_effective_date, axis=1)
+    subset = subset[~subset['Estado'].astype(str).str.lower().str.contains('complet', na=False)]
+    subset = subset.sort_values('_date', na_position='last').head(limit)
+    if subset.empty:
+        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
+    rows = []
+    for _, r in subset.iterrows():
+        fecha = fmt_date(r.get('_date')) if pd.notna(r.get('_date')) else t('date_none')
+        evento = tv(r.get('Tipo_Evento', ''))
+        insumo = r.get('Nombre_Insumo', '') or t('no_input')
+        estado = tv(r.get('Estado', ''))
+        rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td><td>{estado}</td></tr>')
+    return f'<table class="pending-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th><th>{t("status")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+
+
+def tree_notes_html(row):
+    notes = str(row.get('Notas', '') or '').strip()
+    current_event = str(row.get('Evento_Agricola', '') or '').strip()
+    blocks = []
+    if current_event and current_event.lower() != 'nan':
+        blocks.append(f'<div class="pending-note"><b>{t("current_event")}:</b> {tv(current_event)}</div>')
+    if notes and notes.lower() != 'nan':
+        blocks.append(f'<div class="notes-box"><b>{t("notes")}:</b> {notes}</div>')
+    if not blocks:
+        return f'<div class="pending-note">{t("no_notes")}</div>'
+    return ''.join(blocks)
 
 
 def insumo_metadata(insumos, insumo_id=None, nombre=None):
@@ -1542,18 +1613,36 @@ def render_tree_card(row, events=None, insumos=None):
     control_html = control_status_html(latest_control_status(events, row.get("Arbol_ID")))
     history_html = history_table_html(events, row.get("Arbol_ID"))
     next_abono_html = next_soil_abono_html(events, insumos, row.get("Arbol_ID"), row.get("Estado_Fenologico", ""))
+    pending_html = pending_actions_html(events, row.get("Arbol_ID"))
+    notes_html = tree_notes_html(row)
     st.markdown(f"""
     <div class="tree-card">
-        <div class="tree-row">
+        <div class="tree-header">
             <div class="tree-icon">{normalized_tree_icon(row)}</div>
             <div style="width:100%;">
                 <div class="tree-name">{row['Arbol']}</div>
+            </div>
+        </div>
+        <div class="tree-body">
+            <div class="tree-section">
+                <div class="tree-subtitle">{t('general_info')}</div>
                 <div class="tree-line">{t("phenology")} <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{tv(row['Estado_Fenologico'])}</span></div>
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
                 <div class="tree-line">{t("health_status")} <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {tv(row['Estado_Sanitario'])}</span></div>
                 {control_html}
+            </div>
+            <div class="tree-section">
+                <div class="tree-subtitle">{t('registered_events')}</div>
+                <div class="tree-subnote">{t('tree_history_help')}</div>
                 {history_html}
+            </div>
+            <div class="tree-section">
+                <div class="tree-subtitle">{t('future_actions_notes')}</div>
+                <div class="tree-subnote">{t('future_section_help')}</div>
                 {next_abono_html}
+                <div class="pending-note" style="margin-top:8px;"><b>{t('pending_actions')}</b></div>
+                {pending_html}
+                {notes_html}
             </div>
         </div>
     </div>
