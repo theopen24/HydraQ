@@ -955,6 +955,331 @@ def bed_photo_for(unit_name):
                 st.image(file, caption=file.name, use_container_width=True)
 
 
+
+
+# --- Helper functions restored in V24.2 ---
+def fmt_date(value):
+    if pd.isna(value):
+        return t("date_none")
+    return pd.to_datetime(value).strftime("%d %b %Y")
+
+
+def base_date_label(row):
+    if pd.notna(row.get("Fecha_Trasplante")):
+        return f"{t('transplant')}: {fmt_date(row.get('Fecha_Trasplante'))}"
+    if pd.notna(row.get("Fecha_Siembra")):
+        return f"{t('planting')}: {fmt_date(row.get('Fecha_Siembra'))}"
+    return t("date_base_none")
+
+
+def days_html(value, prefix):
+    if pd.isna(value):
+        return f'<div class="info-line">{prefix}: {t("date_none")}</div>'
+    days = (pd.to_datetime(value).date() - date.today()).days
+    if days > 0:
+        return f'<div class="info-line">{prefix}: {t("in_days").format(days=days)}</div>'
+    if days == 0:
+        return f'<div class="info-line past-harvest"><b>{prefix}: {t("harvest_today")}</b></div>'
+    return f'<div class="info-line past-harvest"><b>{prefix}: {t("days_ago").format(days=abs(days))}</b></div>'
+
+
+def display_state(row):
+    if row.get("Visual_Status") == "Disponible":
+        return "Disponible"
+    return row.get("Estado_Actual", "")
+
+
+def html_block(markup):
+    st.markdown(dedent(str(markup)).strip(), unsafe_allow_html=True)
+
+
+def metric_card(label, value, note=""):
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            <div class="metric-note">{note}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def dashboard_metric_cards(cards):
+    parts = ['<div class="dashboard-grid">']
+    for label, value, note in cards:
+        parts.append(f'<div class="dash-card"><div class="dash-label">{label}</div><div class="dash-value">{value}</div><div class="dash-note">{note}</div></div>')
+    parts.append('</div>')
+    html_block(''.join(parts))
+
+
+def normalized_tree_icon(row):
+    name = str(row.get("Arbol", "")).lower()
+    icon = str(row.get("Icono", "") or "🌳")
+    if "limón mandarina" in name or "limon mandarina" in name:
+        return "🍋"
+    if "🍋" in icon and "🍊" in icon:
+        return "🍋"
+    return icon
+
+
+def event_effective_date(row):
+    if pd.notna(row.get("Fecha_Programada")):
+        return row.get("Fecha_Programada")
+    return row.get("Fecha_Realizada")
+
+
+def event_status_class(status, effective_date=None):
+    s = str(status).strip().lower()
+    if "complet" in s:
+        return "event-completado"
+    if effective_date is not None and pd.notna(effective_date) and pd.to_datetime(effective_date).date() < date.today() and "complet" not in s:
+        return "event-vencido"
+    if "pend" in s:
+        return "event-pendiente"
+    return "event-no-empezado"
+
+
+def latest_control_status(events, target_id):
+    if events is None or events.empty or not target_id:
+        return None
+    if "Target_ID" not in events.columns or "Tipo_Evento" not in events.columns:
+        return None
+    subset = events[(events["Target_ID"].astype(str) == str(target_id)) & (events["Tipo_Evento"].astype(str).str.lower() == "control fitosanitario")].copy()
+    if subset.empty:
+        return None
+    subset["_date"] = subset.apply(event_effective_date, axis=1)
+    subset = subset.sort_values("_date", na_position="last")
+    row = subset.iloc[-1]
+    return {"estado": row.get("Estado", ""), "insumo": row.get("Nombre_Insumo", ""), "fecha": row.get("_date")}
+
+
+def control_status_html(control):
+    if not control:
+        return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill event-no-empezado">{t("no_alerts")}</span></div>'
+    cls = event_status_class(control.get("estado"), control.get("fecha"))
+    insumo = control.get("insumo") or t("no_input")
+    fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else t("date_none")
+    return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill {cls}">{tv(control.get("estado", ""))}</span> · {insumo} · {fecha}</div>'
+
+
+def completed_events_for_target(events, target_id, year=None):
+    if events is None or events.empty or not target_id:
+        return pd.DataFrame()
+    if "Target_ID" not in events.columns:
+        return pd.DataFrame()
+    subset = events[events["Target_ID"].astype(str) == str(target_id)].copy()
+    if subset.empty:
+        return subset
+    subset["_date"] = subset.apply(event_effective_date, axis=1)
+    subset = subset[subset["_date"].notna()]
+    subset = subset[subset["Estado"].astype(str).str.lower().str.contains("complet", na=False)]
+    if year is not None and not subset.empty:
+        subset = subset[pd.to_datetime(subset["_date"]).dt.year == year]
+    return subset
+
+
+def history_summary_html(events, target_id):
+    year = date.today().year
+    subset = completed_events_for_target(events, target_id, year)
+    if subset.empty:
+        return f'<div class="history-line">{t("history_year")}: <span class="history-pill">{t("no_alerts")}</span></div>'
+    subset["_key"] = subset["Tipo_Evento"].fillna("").apply(tv) + ": " + subset["Nombre_Insumo"].fillna(t("no_input"))
+    counts = subset.groupby("_key").size().sort_values(ascending=False)
+    pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
+    return f'<div class="history-line">{t("history_year")}: {pills}</div>'
+
+
+def history_table_html(events, target_id, limit=5):
+    subset = completed_events_for_target(events, target_id)
+    if subset.empty:
+        return f'<div class="history-line"><b>{t("history")}:</b> {t("no_history")}</div>'
+    subset = subset.sort_values("_date", ascending=True).tail(limit)
+    rows = []
+    for _, r in subset.iterrows():
+        fecha = pd.to_datetime(r.get("_date")).strftime("%d/%m/%Y") if pd.notna(r.get("_date")) else ""
+        evento = tv(r.get("Tipo_Evento", ""))
+        insumo = r.get("Nombre_Insumo", "") or t("no_input")
+        rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td></tr>')
+    return f'<table class="history-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
+
+
+def insumo_metadata(insumos, insumo_id=None, nombre=None):
+    if insumos is None or insumos.empty:
+        return {}
+    df = insumos.copy()
+    row = None
+    if insumo_id and "ID_Insumo" in df.columns:
+        m = df[df["ID_Insumo"].astype(str) == str(insumo_id)]
+        if not m.empty:
+            row = m.iloc[0]
+    if row is None and nombre and "Nombre" in df.columns:
+        m = df[df["Nombre"].astype(str).str.lower() == str(nombre).lower()]
+        if not m.empty:
+            row = m.iloc[0]
+    if row is None:
+        return {}
+    return {k: row.get(k, "") for k in df.columns}
+
+
+def next_soil_abono_html(events, insumos, target_id, estado_fenologico=""):
+    if events is None or events.empty or not target_id:
+        return f'<div class="next-abono">{t("next_abono_no_history")}</div>'
+    subset = completed_events_for_target(events, target_id)
+    subset = subset[subset["Tipo_Evento"].astype(str).str.lower() == "abono tierra"] if not subset.empty else subset
+    if subset.empty:
+        return f'<div class="next-abono">{t("next_abono_no_soil")}</div>'
+    subset = subset.sort_values("_date")
+    last = subset.iloc[-1]
+    meta = insumo_metadata(insumos, last.get("ID_Insumo"), last.get("Nombre_Insumo"))
+    freq = pd.to_numeric(meta.get("Frecuencia_Dias", None), errors="coerce")
+    insumo = last.get("Nombre_Insumo") or meta.get("Nombre") or "Abono tierra"
+    last_date = pd.to_datetime(last.get("_date")).date()
+    cantidad = meta.get("Cantidad_Guia", "") or t("according_criteria")
+    momento = meta.get("Momento_Aplicacion", "") or t("according_state")
+    if pd.isna(freq) or float(freq) <= 0:
+        return f'<div class="next-abono">{t("last_abono")}: {insumo} · {fmt_date(last_date)} · {t("guide_quantity")}: {cantidad}</div>'
+    next_date = last_date + timedelta(days=int(freq))
+    days = (next_date - date.today()).days
+    cls = "next-abono overdue" if days <= 0 else "next-abono"
+    timing = t("overdue").lower() if days < 0 else t("harvest_today") if days == 0 else t("in_days").format(days=days)
+    return f'<div class="{cls}">{t("next_abono_suggested")}: {insumo} · {fmt_date(next_date)} ({timing})<br>{t("guide_quantity")}: {cantidad}<br>{t("timing")}: {momento}</div>'
+
+
+def render_dashboard_view(filtered, filtered_units, events, trees, log_gpt=None):
+    active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")].copy()
+    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy() if "Cosecha_Disponible" in active_crops.columns else pd.DataFrame()
+    explicit_available = filtered[filtered["Cultivo"] == "Disponible"].copy()
+    errors = int((filtered["Visual_Status"] == "Dato faltante").sum()) if "Visual_Status" in filtered.columns else 0
+    total_plants = int(pd.to_numeric(active_crops.get("Cantidad", 0), errors="coerce").fillna(0).sum()) if not active_crops.empty else 0
+    species_count = int(active_crops["Cultivo"].nunique()) if not active_crops.empty else 0
+
+    next_harvest_value = t("date_none")
+    next_harvest_note = t("no_available_harvest")
+    if not available_harvest.empty:
+        item = available_harvest.sort_values("Cosecha_Min").iloc[0]
+        next_harvest_value = fmt_date(item["Cosecha_Min"])
+        next_harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
+
+    next_15_events = pd.DataFrame()
+    overdue_events = pd.DataFrame()
+    if events is not None and not events.empty and "Estado" in events.columns:
+        pending_events = events[~events["Estado"].astype(str).str.lower().str.contains("complet", na=False)].copy()
+        if not pending_events.empty:
+            pending_events["_date"] = pending_events.apply(event_effective_date, axis=1)
+            dated = pending_events[pending_events["_date"].notna()].copy()
+            if not dated.empty:
+                dated["_date"] = pd.to_datetime(dated["_date"]).dt.date
+                today = date.today()
+                next_15_events = dated[(dated["_date"] >= today) & (dated["_date"] <= today + timedelta(days=15))]
+                overdue_events = dated[dated["_date"] < today]
+
+    active_trees = 0 if trees is None or trees.empty else len(trees)
+    cards = [
+        (t("crops"), total_plants, t("different_species").format(n=species_count)),
+        (t("trees"), active_trees, t("registered")),
+        (t("beds"), filtered_units["Unidad"].nunique() if "Unidad" in filtered_units.columns else 0, t("by_filters")),
+        (t("harvest"), next_harvest_value, next_harvest_note),
+        (t("available_harvests_short"), len(available_harvest), t("min_in_past")),
+        (t("spaces"), len(explicit_available), t("available_plural")),
+        (t("errors"), errors, t("missing_data")),
+        (t("events_15d"), len(next_15_events), t("pending_next")),
+    ]
+    dashboard_metric_cards(cards)
+
+    c1, c2 = st.columns([1,1])
+    with c1:
+        lines = []
+        if len(overdue_events) > 0:
+            lines.append(f'<div class="dash-line"><span class="dash-pill pill-red">{t("overdue")}</span> {len(overdue_events)} {t("events_not_done")}</div>')
+        if len(next_15_events) > 0:
+            sample = next_15_events.sort_values("_date").head(3)
+            for _, r in sample.iterrows():
+                lines.append(f'<div class="dash-line"><span class="dash-pill pill-yellow">{fmt_date(r["_date"])}</span> {r.get("Tipo_Evento", "Evento")} · {r.get("Target_Label", "")}</div>')
+        if not lines:
+            lines.append(f'<div class="dash-line"><span class="dash-pill pill-green">{t("no_alerts")}</span> {t("no_events_15")}</div>')
+        html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("special_events")}</div>{"".join(lines)}</div>')
+    with c2:
+        html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("quick_notes")}</div><div class="dash-line">{t("quick_notes_help")}</div></div>')
+        note = st.text_area(t("new_note"), placeholder=t("note_placeholder"), height=90, key="quick_note")
+        if note.strip():
+            st.download_button(t("download_note"), data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
+
+    render_gpt_log_panel(log_gpt)
+
+
+def render_gpt_log_panel(log_gpt):
+    st.markdown(f'<div class="event-section-title">🧾 {t("last_gpt_events")}</div>', unsafe_allow_html=True)
+    st.caption(t("last_gpt_events_help"))
+    if log_gpt is None or log_gpt.empty:
+        html_block(f'<div class="dash-panel"><div class="dash-line">{t("no_gpt_log")}</div></div>')
+        return
+    view = log_gpt.copy()
+    if "FechaHora" in view.columns:
+        view = view.sort_values("FechaHora", ascending=False).head(10).copy()
+        view["Fecha"] = view["FechaHora"].dt.strftime("%d/%m/%Y %H:%M").fillna("")
+    else:
+        view["Fecha"] = ""
+    cols = [c for c in ["Fecha", "Accion", "Estado", "ComandoOriginal"] if c in view.columns]
+    st.dataframe(view[cols].head(10), use_container_width=True, hide_index=True)
+
+
+def render_weather_view():
+    st.markdown(f'<div class="section-title">☁️ {t("climate")}</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1, 1.6])
+    with c1:
+        st.radio(t("period"), [t("weekly"), t("monthly")], index=0, horizontal=True, key="weather_period")
+    with c2:
+        finca = st.radio(t("farm"), ["Frailes", "Moravia"], index=0, horizontal=True, key="weather_farm")
+    with c3:
+        st.selectbox(t("week"), ["Semana actual", "Próxima semana", "Mes actual"], key="weather_week")
+
+    html_block(f'<div class="weather-reference"><b>{t("rain_reference")}:</b> {t("rain_reference_text")}</div>')
+    mock = {
+        "Moravia": {"rain": 28.4, "sun": 32.1, "days": 3, "temp": 24.3},
+        "Frailes": {"rain": 68.7, "sun": 18.6, "days": 5, "temp": 22.1},
+    }
+    cols = st.columns(4)
+    metrics = [("🌧️", t("rain_7_days"), "rain", "mm"),("☀️", t("sun_hours"), "sun", "h"),("☔", t("rainy_days"), "days", ""),("🌡️", t("avg_temp"), "temp", "°C")]
+    for col, (icon, label, key, suffix) in zip(cols, metrics):
+        with col:
+            value = mock[finca][key]
+            html_block(f'<div class="weather-card"><div class="weather-title">{icon} {label}</div><div class="weather-value">{value}{suffix}</div><div class="weather-note">{finca}</div></div>')
+    html_block(f'<div class="dash-panel"><div class="dash-line"><b>{t("sample_data")}.</b> {t("future_integration")}.</div></div>')
+
+
+def render_progress_view():
+    st.markdown(f'<div class="section-title">📷 {t("progress")}</div>', unsafe_allow_html=True)
+    html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("photo_progress")}</div><div class="dash-line">{t("photo_progress_help")}</div><div class="dash-line"><span class="dash-pill pill-blue">Tip</span> {t("camera_note")}</div></div>')
+    photo_map = {
+        "Cama 1": (None, "Pendiente"),
+        "Cama 2": ("cama_2_junio.jpeg", "Junio 2026"),
+        "Cama 3": ("cama_3_junio.jpeg", "Junio 2026"),
+        "Cama 4": ("cama_4_junio.jpeg", "Junio 2026"),
+        "Cama 5": ("cama_5_junio.jpeg", "Junio 2026"),
+        "Cama 6": ("cama_6_junio.jpeg", "Junio 2026"),
+        "Cama 7": ("cama_7_junio.jpeg", "Junio 2026"),
+    }
+    cards = ['<div class="progress-grid">']
+    for cama, (img, periodo) in photo_map.items():
+        uri = img_data_uri(img) if img else None
+        if uri:
+            frame = f'<div class="progress-frame"><img src="{uri}"></div>'
+        else:
+            frame = f'<div class="progress-frame">📷<br>{t("bed_photo_pending")}</div>'
+        cards.append(f'<div class="progress-card">{frame}<div class="progress-title">{cama}</div><div class="progress-meta">{periodo} · {t("same_frame")}</div></div>')
+    cards.append('</div>')
+    html_block(''.join(cards))
+
+    uploaded = st.file_uploader(t("upload_new_photo"), type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+    if uploaded:
+        st.write(f"{len(uploaded)} archivo(s) cargado(s) para vista previa. Persistencia real pendiente de integrar.")
+        cols = st.columns(3)
+        for col, file in zip(cols, uploaded[:3]):
+            with col:
+                st.image(file, caption=file.name, use_container_width=True)
+
 def crop_card(row, idx, events=None):
     crop = row["Cultivo"]
     meta = CROP_META.get(crop, {"icon": "🌱", "class": "lettuce"})
