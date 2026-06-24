@@ -790,6 +790,55 @@ def load_data():
     return clean_view(df), clean_units(unidades, fincas), clean_trees(arboles), clean_events(eventos), insumos, clean_gpt_log(log_gpt)
 
 
+
+def clean_view(df):
+    out = pd.DataFrame()
+    n = len(df)
+
+    def col_series(candidates, default_value=""):
+        source = find_col(df, candidates, None)
+        if source and source in df.columns:
+            return df[source]
+        return pd.Series([default_value] * n)
+
+    out["Siembra_ID"] = col_series(["Siembra_ID"], None) if "Siembra_ID" in df.columns else [f"ROW_{i}" for i in range(n)]
+    out["Finca"] = col_series(["Finca", "Finca_Nombre", "Nombre_Finca"], "").fillna("").astype(str)
+    out["Unidad"] = col_series(["Unidad", "Unidad_Nombre", "Nombre_Unidad"], "").fillna("").astype(str)
+    out["Cultivo"] = col_series(["Cultivo", "Cultivo_Nombre", "Nombre_Cultivo"], "").fillna("").astype(str)
+    out["Cantidad"] = pd.to_numeric(col_series(["Cantidad"], 0), errors="coerce").fillna(0).astype(int)
+    out["Estado_Actual"] = col_series(["Estado_Actual", "Estado"], "Sin estado").fillna("Sin estado").astype(str)
+    out["Estado_Unidad"] = col_series(["Estado_Unidad"], "Activa").fillna("Activa").astype(str)
+    out["Alerta_Datos"] = col_series(["Alerta_Datos", "Estado_Ficha"], "").fillna("").astype(str)
+
+    for col in ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]:
+        source = find_col(df, [col], None)
+        out[col] = pd.to_datetime(df[source], errors="coerce") if source and source in df.columns else pd.NaT
+
+    # Si Cosecha_Min/Max no vienen calculadas desde Google Sheets, calcularlas usando días del catálogo/vista.
+    min_col = find_col(df, ["Dias_Cosecha_Min", "Dias_Min_Cosecha", "Cosecha_Dias_Min"], None)
+    max_col = find_col(df, ["Dias_Cosecha_Max", "Dias_Max_Cosecha", "Cosecha_Dias_Max"], None)
+    base_date = out["Fecha_Base"].copy()
+    base_date = base_date.fillna(out["Fecha_Trasplante"]).fillna(out["Fecha_Siembra"])
+    out["Fecha_Base"] = out["Fecha_Base"].fillna(base_date)
+
+    if min_col and min_col in df.columns:
+        dias_min = pd.to_numeric(df[min_col], errors="coerce")
+        missing_min = out["Cosecha_Min"].isna() & base_date.notna() & dias_min.notna()
+        out.loc[missing_min, "Cosecha_Min"] = base_date[missing_min] + pd.to_timedelta(dias_min[missing_min], unit="D")
+    if max_col and max_col in df.columns:
+        dias_max = pd.to_numeric(df[max_col], errors="coerce")
+        missing_max = out["Cosecha_Max"].isna() & base_date.notna() & dias_max.notna()
+        out.loc[missing_max, "Cosecha_Max"] = base_date[missing_max] + pd.to_timedelta(dias_max[missing_max], unit="D")
+
+    mask_disp = out.apply(is_available_placeholder, axis=1) if len(out) else pd.Series([], dtype=bool)
+    if len(out):
+        out.loc[mask_disp, ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]] = pd.NaT
+
+    out["Cosecha_Disponible"] = out.apply(is_harvest_ready, axis=1) if len(out) else False
+    out["Mes_Cosecha"] = out["Cosecha_Min"].dt.strftime("%Y-%m").fillna("Sin fecha")
+    out["Visual_Status"] = out.apply(visual_status, axis=1) if len(out) else "Sin datos"
+    return out
+
 def clean_units(unidades, fincas):
     out = unidades.copy()
     if "Finca_Nombre" not in out.columns:
