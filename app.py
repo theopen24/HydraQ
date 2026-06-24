@@ -1,7 +1,6 @@
 from pathlib import Path
 from datetime import date, datetime, timedelta
 import calendar
-import re
 from textwrap import dedent
 
 import pandas as pd
@@ -400,48 +399,6 @@ def tv(value):
 def month_name(month_number):
     return (MONTHS_EN if lang_code() == "en" else MONTHS_ES).get(month_number, str(month_number))
 
-
-UI_TEXT['es'].update({
-    'general_info':'Información general',
-    'registered_events':'Eventos registrados',
-    'future_actions_notes':'Acciones futuras y notas',
-    'pending_actions':'Acciones programadas',
-    'no_pending_actions':'Sin acciones futuras programadas',
-    'notes':'Notas',
-    'no_notes':'Sin notas',
-    'current_event':'Evento agrícola',
-    'tree_history_help':'Historial cronológico más reciente',
-    'future_section_help':'Próximas acciones sugeridas y observaciones',
-    'doses':'Dosis',
-    'field_dose_reference':'Referencia de dosis en campo',
-    'liquid_foliar_controls':'Controles fitosanitarios y abonos foliares',
-    'yaramila_tree_reference':'YaraMila Hydrocomplex por árbol',
-    'dose_per_liter':'Dosis por litro',
-    'dose_per_20l':'Dosis por bomba 20 L',
-    'source_note':'Nota / fuente',
-    'reference_only':'Referencia operativa; validar etiqueta del producto antes de aplicar.'
-})
-UI_TEXT['en'].update({
-    'general_info':'General information',
-    'registered_events':'Registered events',
-    'future_actions_notes':'Future actions and notes',
-    'pending_actions':'Scheduled actions',
-    'no_pending_actions':'No upcoming actions scheduled',
-    'notes':'Notes',
-    'no_notes':'No notes',
-    'current_event':'Agricultural event',
-    'tree_history_help':'Most recent chronological history',
-    'future_section_help':'Suggested next actions and observations',
-    'doses':'Doses',
-    'field_dose_reference':'Field dose reference',
-    'liquid_foliar_controls':'Phytosanitary controls and foliar fertilizers',
-    'yaramila_tree_reference':'YaraMila Hydrocomplex by tree',
-    'dose_per_liter':'Dose per liter',
-    'dose_per_20l':'Dose per 20 L sprayer',
-    'source_note':'Note / source',
-    'reference_only':'Operational reference; validate product label before applying.'
-})
-
 st.markdown(
     """
 <style>
@@ -711,20 +668,6 @@ st.markdown(
 .history-table th {background:#ecfdf5; color:#166534; text-align:left; padding:5px 6px; font-weight:950;}
 .history-table td {border-top:1px solid #d1fae5; padding:5px 6px; color:#334155; font-weight:750; vertical-align:top;}
 .history-table .datecol {white-space:nowrap; color:#0f3d25; font-weight:950;}
-.tree-header {display:flex; align-items:center; gap:14px; margin-bottom:10px;}
-.tree-body {display:flex; flex-direction:column; gap:10px;}
-.tree-section {background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px;}
-.tree-section.general-info {background:#f8fafc; border-left:5px solid #86efac;}
-.tree-section.registered-events {background:#f0fdf4; border-left:5px solid #22c55e;}
-.tree-section.future-actions {background:#eff6ff; border-left:5px solid #3b82f6;}
-.tree-section + .tree-section {margin-top:2px;}
-.tree-subtitle {font-size:12px; font-weight:950; color:#0f3d25; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
-.tree-subnote {font-size:11px; color:#64748b; font-weight:750; margin:-2px 0 6px 0;}
-.pending-table {width:100%; border-collapse:collapse; margin-top:6px; font-size:11px;}
-.pending-table th {background:#eff6ff; color:#1d4ed8; text-align:left; padding:5px 6px; font-weight:950;}
-.pending-table td {border-top:1px solid #dbeafe; padding:5px 6px; color:#334155; font-weight:750; vertical-align:top;}
-.pending-note {font-size:12px; color:#334155; font-weight:750; margin-top:6px;}
-.notes-box {margin-top:8px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:8px 10px; color:#7c2d12; font-size:12px; font-weight:750;}
 .progress-grid {display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;}
 .progress-card {background:rgba(255,255,255,.95); border:1px solid rgba(255,255,255,.72); border-radius:16px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.14); color:#0f172a;}
 .progress-frame {width:100%; aspect-ratio:4 / 3; border-radius:12px; overflow:hidden; background:#e5e7eb; border:1px solid #dbe7de; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:950;}
@@ -733,23 +676,11 @@ st.markdown(
 .progress-meta {font-size:12px; color:#64748b; font-weight:750;}
 .weather-reference {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-weight:800; margin:8px 0 12px 0;}
 
+.harvest-summary {background:#f8fafc;border:1px solid #dbe7de;border-radius:16px;padding:12px 14px;margin:8px 0 14px 0;color:#0f172a;}
+.harvest-summary-title {font-size:16px;font-weight:950;color:#0f3d25;margin-bottom:8px;}
+.harvest-chip {display:inline-block;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:999px;padding:5px 10px;margin:3px;font-size:12px;font-weight:900;}
+.harvest-qty {font-weight:950;color:#0f3d25;}
 
-
-.bed-thumb-link {display:inline-block; width:20%; max-width:145px; min-width:92px;}
-.bed-thumb-link .bed-thumb {width:100%; max-width:145px; min-width:92px;}
-.img-modal {position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; align-items:center; justify-content:center; z-index:999999; padding:24px;}
-.img-modal:target {display:flex;}
-.img-modal img {max-width:92vw; max-height:86vh; border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,.45);}
-.img-modal .close {position:absolute; top:18px; right:24px; color:white; text-decoration:none; font-size:38px; font-weight:950; line-height:1;}
-.img-modal-caption {position:absolute; bottom:18px; color:white; background:rgba(0,0,0,.42); padding:8px 12px; border-radius:999px; font-size:13px; font-weight:800;}
-.dose-section-title {font-size:24px; font-weight:950; color:#ffffff; margin:20px 0 12px 0;}
-.dose-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-bottom:18px;}
-.dose-card {background:rgba(255,255,255,.96); border:1px solid rgba(255,255,255,.7); border-radius:16px; padding:13px 14px; color:#0f172a; box-shadow:0 6px 16px rgba(0,0,0,.14);}
-.dose-name {font-size:16px; font-weight:950; color:#0f3d25; margin-bottom:5px;}
-.dose-chip {display:inline-block; padding:4px 9px; border-radius:999px; background:#ecfdf5; color:#166534; font-size:12px; font-weight:900; margin:2px 4px 5px 0;}
-.dose-line {font-size:13px; color:#334155; font-weight:750; margin-top:4px;}
-.dose-note {font-size:12px; color:#64748b; font-weight:700; margin-top:6px;}
-.dose-warning {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-size:13px; font-weight:800; margin-bottom:14px;}
 
 </style>
 """,
@@ -841,14 +772,14 @@ def load_data():
         "EventosAgricolas",
         ["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID",
          "Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada",
-         "Fecha_Realizada","Estado","Notas"]
+         "Fecha_Realizada","Estado","Notas","Cantidad","Unidad_Medida",
+         "Cantidad_Normalizada","Unidad_Normalizada","Tipo_Cosecha","Destino",
+         "Afecta_Inventario","Notas_Cosecha"]
     )
 
     insumos = _read_sheet(
         "Insumos",
-        ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida",
-         "Cantidad_Guia","Momento_Aplicacion","Frecuencia_Dias","Dosis_Por_Litro","Unidad_Dosis",
-         "Dosis_5L","Dosis_10L","Tipo_Dosis","Fuente_Dosis","Notas_Dosis"]
+        ["ID_Insumo","Nombre","Tipo","Disponible","Uso_Principal","Restricciones/Notas","Compra_Requerida"]
     )
 
     log_gpt = _read_sheet(
@@ -876,7 +807,7 @@ def clean_trees(arboles):
         out["Arbol_ID"] = [f"ARB_{i:03d}" for i in range(len(out))]
     if "Arbol" not in out.columns and "Nombre" in out.columns:
         out["Arbol"] = out["Nombre"]
-    for col in ["Finca", "Arbol", "Icono", "Estado_Fenologico", "Trasplante", "Estado_Sanitario", "Evento_Agricola", "Notas"]:
+    for col in ["Finca", "Arbol", "Icono", "Estado_Fenologico", "Trasplante", "Estado_Sanitario", "Evento_Agricola"]:
         if col not in out.columns:
             out[col] = ""
         out[col] = out[col].fillna("N/A" if col == "Trasplante" else "").astype(str)
@@ -890,10 +821,23 @@ def clean_events(eventos):
             out[col] = pd.to_datetime(out[col], errors="coerce")
         else:
             out[col] = pd.NaT
-    for col in ["Tipo_Evento", "Nombre_Insumo", "Target_Tipo", "Target_ID", "Target_Label", "Finca", "Unidad", "Cultivo", "Arbol", "Estado", "Notas"]:
+
+    text_cols = [
+        "Tipo_Evento", "Nombre_Insumo", "Target_Tipo", "Target_ID", "Target_Label",
+        "Finca", "Unidad", "Cultivo", "Arbol", "Estado", "Notas",
+        "Unidad_Medida", "Unidad_Normalizada", "Tipo_Cosecha", "Destino",
+        "Afecta_Inventario", "Notas_Cosecha"
+    ]
+    for col in text_cols:
         if col not in out.columns:
             out[col] = ""
         out[col] = out[col].fillna("").astype(str)
+
+    for col in ["Cantidad", "Cantidad_Normalizada"]:
+        if col not in out.columns:
+            out[col] = pd.NA
+        out[col] = pd.to_numeric(out[col], errors="coerce")
+
     return out
 
 
@@ -933,412 +877,14 @@ def img_data_uri(name):
 
 def bed_photo_for(unit_name):
     u = str(unit_name).lower()
-    if "6" in u:
-        return asset_path("cama_6_y_3.jpeg"), "Cama 6 / referencia actual"
-    if "3" in u:
-        return asset_path("cama_6_y_3.jpeg"), "Cama 3 / referencia actual"
-    if "1" in u or "2" in u:
-        return asset_path("vista_este.jpeg"), "Vista de referencia"
-    if "4" in u or "5" in u or "7" in u:
-        return asset_path("vista_sur.jpeg"), "Vista de referencia"
-    return None, "Referencia visual pendiente"
-
-
-def normalized_tree_icon(row):
-    name = str(row.get("Arbol", "")).lower()
-    if "manzano" in name or "manzana" in name:
-        return "🍎"
-    if "limón" in name or "limon" in name:
-        return "🍋"
-    if "naranja" in name or "mandarina" in name:
-        return "🍊"
-    if "mango" in name or "manga" in name:
-        return "🥭"
-    if "durazno" in name:
-        return "🌸"
-    if "banano" in name or "plátano" in name or "platano" in name:
-        return "🍌"
-    icon = str(row.get("Icono", "") or "🌳").strip()
-    for candidate in ["🍎", "🍋", "🍊", "🥭", "🌸", "🍌", "🌳"]:
-        if candidate in icon:
-            return candidate
-    return "🌳"
-
-
-def event_effective_date(row):
-    if pd.notna(row.get("Fecha_Programada")):
-        return row.get("Fecha_Programada")
-    return row.get("Fecha_Realizada")
-
-
-def event_status_class(status, effective_date=None):
-    s = str(status).strip().lower()
-    if "complet" in s:
-        return "event-completado"
-    if effective_date is not None and pd.notna(effective_date) and pd.to_datetime(effective_date).date() < date.today() and "complet" not in s:
-        return "event-vencido"
-    if "pend" in s:
-        return "event-pendiente"
-    return "event-no-empezado"
-
-
-def latest_control_status(events, target_id):
-    if events is None or events.empty or not target_id:
-        return None
-    subset = events[(events["Target_ID"].astype(str) == str(target_id)) & (events["Tipo_Evento"].str.lower() == "control fitosanitario")].copy()
-    if subset.empty:
-        return None
-    subset["_date"] = subset.apply(event_effective_date, axis=1)
-    subset = subset.sort_values("_date", na_position="last")
-    row = subset.iloc[-1]
-    return {"estado": row.get("Estado", ""), "insumo": row.get("Nombre_Insumo", ""), "fecha": row.get("_date")}
-
-
-def control_status_html(control):
-    if not control:
-        return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill event-no-empezado">{t("no_alerts")}</span></div>'
-    cls = event_status_class(control.get("estado"), control.get("fecha"))
-    insumo = control.get("insumo") or t("no_input")
-    fecha = fmt_date(control.get("fecha")) if pd.notna(control.get("fecha")) else t("date_none")
-    return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill {cls}">{tv(control.get("estado", ""))}</span> · {insumo} · {fecha}</div>'
-
-
-
-def completed_events_for_target(events, target_id, year=None):
-    if events is None or events.empty or not target_id:
-        return pd.DataFrame()
-    subset = events[events["Target_ID"].astype(str) == str(target_id)].copy()
-    if subset.empty:
-        return subset
-    subset["_date"] = subset.apply(event_effective_date, axis=1)
-    subset = subset[subset["_date"].notna()]
-    subset = subset[subset["Estado"].astype(str).str.lower().str.contains("complet", na=False)]
-    if year is not None:
-        subset = subset[pd.to_datetime(subset["_date"]).dt.year == year]
-    return subset
-
-
-def history_summary_html(events, target_id):
-    year = date.today().year
-    subset = completed_events_for_target(events, target_id, year)
-    if subset.empty:
-        return f'<div class="history-line">{t("history_year")}: <span class="history-pill">{t("no_alerts")}</span></div>'
-    subset["_key"] = subset["Tipo_Evento"].fillna("").apply(tv) + ": " + subset["Nombre_Insumo"].fillna(t("no_input"))
-    counts = subset.groupby("_key").size().sort_values(ascending=False)
-    pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
-    return f'<div class="history-line">{t("history_year")}: {pills}</div>'
-
-def history_table_html(events, target_id, limit=5):
-    subset = completed_events_for_target(events, target_id)
-    if subset.empty:
-        return f'<div class="history-line"><b>{t("history")}:</b> {t("no_history")}</div>'
-    subset = subset.sort_values("_date", ascending=True).tail(limit)
-    rows = []
-    for _, r in subset.iterrows():
-        fecha = pd.to_datetime(r.get("_date")).strftime("%d/%m/%Y") if pd.notna(r.get("_date")) else ""
-        evento = tv(r.get("Tipo_Evento", ""))
-        insumo = r.get("Nombre_Insumo", "") or t("no_input")
-        rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td></tr>')
-    return f'<table class="history-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
-
-
-
-def pending_actions_html(events, target_id, limit=4):
-    if events is None or events.empty or not target_id:
-        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
-    subset = events[events['Target_ID'].astype(str) == str(target_id)].copy()
-    if subset.empty:
-        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
-    subset['_date'] = subset.apply(event_effective_date, axis=1)
-    subset = subset[~subset['Estado'].astype(str).str.lower().str.contains('complet', na=False)]
-    subset = subset.sort_values('_date', na_position='last').head(limit)
-    if subset.empty:
-        return f'<div class="pending-note">{t("no_pending_actions")}</div>'
-    rows = []
-    for _, r in subset.iterrows():
-        fecha = fmt_date(r.get('_date')) if pd.notna(r.get('_date')) else t('date_none')
-        evento = tv(r.get('Tipo_Evento', ''))
-        insumo = r.get('Nombre_Insumo', '') or t('no_input')
-        estado = tv(r.get('Estado', ''))
-        rows.append(f'<tr><td class="datecol">{fecha}</td><td>{evento}</td><td>{insumo}</td><td>{estado}</td></tr>')
-    return f'<table class="pending-table"><thead><tr><th>{t("date")}</th><th>{t("event_type")}</th><th>{t("input")}</th><th>{t("status")}</th></tr></thead><tbody>{"".join(rows)}</tbody></table>'
-
-
-def tree_notes_html(row):
-    notes = str(row.get('Notas', '') or '').strip()
-    current_event = str(row.get('Evento_Agricola', '') or '').strip()
-    blocks = []
-    if current_event and current_event.lower() != 'nan':
-        blocks.append(f'<div class="pending-note"><b>{t("current_event")}:</b> {tv(current_event)}</div>')
-    if notes and notes.lower() != 'nan':
-        blocks.append(f'<div class="notes-box"><b>{t("notes")}:</b> {notes}</div>')
-    if not blocks:
-        return f'<div class="pending-note">{t("no_notes")}</div>'
-    return ''.join(blocks)
-
-
-def insumo_metadata(insumos, insumo_id=None, nombre=None):
-    if insumos is None or insumos.empty:
-        return {}
-    df = insumos.copy()
-    row = None
-    if insumo_id and "ID_Insumo" in df.columns:
-        m = df[df["ID_Insumo"].astype(str) == str(insumo_id)]
-        if not m.empty:
-            row = m.iloc[0]
-    if row is None and nombre and "Nombre" in df.columns:
-        m = df[df["Nombre"].astype(str).str.lower() == str(nombre).lower()]
-        if not m.empty:
-            row = m.iloc[0]
-    if row is None:
-        return {}
-    return {k: row.get(k, "") for k in df.columns}
-
-
-def next_soil_abono_html(events, insumos, target_id, estado_fenologico=""):
-    if events is None or events.empty or not target_id:
-        return f'<div class="next-abono">{t("next_abono_no_history")}</div>'
-    subset = completed_events_for_target(events, target_id)
-    subset = subset[subset["Tipo_Evento"].astype(str).str.lower() == "abono tierra"] if not subset.empty else subset
-    if subset.empty:
-        return f'<div class="next-abono">{t("next_abono_no_soil")}</div>'
-    subset = subset.sort_values("_date")
-    last = subset.iloc[-1]
-    meta = insumo_metadata(insumos, last.get("ID_Insumo"), last.get("Nombre_Insumo"))
-    freq = pd.to_numeric(meta.get("Frecuencia_Dias", None), errors="coerce")
-    insumo = last.get("Nombre_Insumo") or meta.get("Nombre") or "Abono tierra"
-    last_date = pd.to_datetime(last.get("_date")).date()
-    cantidad = meta.get("Cantidad_Guia", "") or t("according_criteria")
-    momento = meta.get("Momento_Aplicacion", "") or t("according_state")
-    if pd.isna(freq) or float(freq) <= 0:
-        return f'<div class="next-abono">{t("last_abono")}: {insumo} · {fmt_date(last_date)} · {t("guide_quantity")}: {cantidad}</div>'
-    next_date = last_date + timedelta(days=int(freq))
-    days = (next_date - date.today()).days
-    cls = "next-abono overdue" if days <= 0 else "next-abono"
-    timing = t("overdue").lower() if days < 0 else t("harvest_today") if days == 0 else t("in_days").format(days=days)
-    return f'<div class="{cls}">{t("next_abono_suggested")}: {insumo} · {fmt_date(next_date)} ({timing})<br>{t("guide_quantity")}: {cantidad}<br>{t("timing")}: {momento}</div>'
-
-def clean_view(df):
-    out = pd.DataFrame()
-    out["Siembra_ID"] = df[find_col(df, ["Siembra_ID"], None)] if "Siembra_ID" in df.columns else [f"ROW_{i}" for i in range(len(df))]
-    out["Finca"] = df[find_col(df, ["Finca", "Finca_Nombre", "Nombre_Finca"], None)].astype(str)
-    out["Unidad"] = df[find_col(df, ["Unidad", "Unidad_Nombre", "Nombre_Unidad"], None)].astype(str)
-    out["Cultivo"] = df[find_col(df, ["Cultivo", "Cultivo_Nombre", "Nombre_Cultivo"], None)].astype(str)
-    out["Cantidad"] = pd.to_numeric(df[find_col(df, ["Cantidad"], None)], errors="coerce").fillna(0).astype(int)
-    out["Estado_Actual"] = df[find_col(df, ["Estado_Actual", "Estado"], None)].fillna("Sin estado").astype(str)
-    out["Estado_Unidad"] = df[find_col(df, ["Estado_Unidad"], None)].fillna("Activa").astype(str) if "Estado_Unidad" in df.columns else "Activa"
-    out["Alerta_Datos"] = df[find_col(df, ["Alerta_Datos", "Estado_Ficha"], None)].fillna("").astype(str) if ("Alerta_Datos" in df.columns or "Estado_Ficha" in df.columns) else ""
-
-    for col in ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]:
-        source = find_col(df, [col], None)
-        out[col] = pd.to_datetime(df[source], errors="coerce") if source else pd.NaT
-
-    mask_disp = out.apply(is_available_placeholder, axis=1)
-    out.loc[mask_disp, ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]] = pd.NaT
-
-    out["Cosecha_Disponible"] = out.apply(is_harvest_ready, axis=1)
-    out["Mes_Cosecha"] = out["Cosecha_Min"].dt.strftime("%Y-%m").fillna("Sin fecha")
-    out["Visual_Status"] = out.apply(visual_status, axis=1)
-    return out
-
-
-def fmt_date(value):
-    if pd.isna(value):
-        return t("date_none")
-    return pd.to_datetime(value).strftime("%d %b %Y")
-
-
-def base_date_label(row):
-    if pd.notna(row["Fecha_Trasplante"]):
-        return f"{t('transplant')}: {fmt_date(row['Fecha_Trasplante'])}"
-    if pd.notna(row["Fecha_Siembra"]):
-        return f"{t('planting')}: {fmt_date(row['Fecha_Siembra'])}"
-    return t("date_base_none")
-
-
-def days_html(value, prefix):
-    if pd.isna(value):
-        return f'<div class="info-line">{prefix}: {t("date_none")}</div>'
-    days = (pd.to_datetime(value).date() - date.today()).days
-    if days > 0:
-        return f'<div class="info-line">{prefix}: {t("in_days").format(days=days)}</div>'
-    if days == 0:
-        return f'<div class="info-line past-harvest"><b>{prefix}: {t("harvest_today")}</b></div>'
-    return f'<div class="info-line past-harvest"><b>{prefix}: {t("days_ago").format(days=abs(days))}</b></div>'
-
-
-def display_state(row):
-    if row.get("Visual_Status") == "Disponible":
-        return "Disponible"
-    return row["Estado_Actual"]
-
-
-def metric_card(label, value, note=""):
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-note">{note}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def html_block(markup):
-    st.markdown(dedent(str(markup)).strip(), unsafe_allow_html=True)
-
-
-def dashboard_metric_cards(cards):
-    parts = ['<div class="dashboard-grid">']
-    for label, value, note in cards:
-        parts.append(f'<div class="dash-card"><div class="dash-label">{label}</div><div class="dash-value">{value}</div><div class="dash-note">{note}</div></div>')
-    parts.append('</div>')
-    html_block(''.join(parts))
-
-
-def render_dashboard_view(filtered, filtered_units, events, trees, log_gpt=None):
-    active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")].copy()
-    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
-    explicit_available = filtered[filtered["Cultivo"] == "Disponible"].copy()
-    errors = int((filtered["Visual_Status"] == "Dato faltante").sum())
-    total_plants = int(pd.to_numeric(active_crops.get("Cantidad", 0), errors="coerce").fillna(0).sum()) if not active_crops.empty else 0
-    species_count = int(active_crops["Cultivo"].nunique()) if not active_crops.empty else 0
-
-    next_harvest_value = t("date_none")
-    next_harvest_note = t("no_available_harvest")
-    if not available_harvest.empty:
-        item = available_harvest.sort_values("Cosecha_Min").iloc[0]
-        next_harvest_value = fmt_date(item["Cosecha_Min"])
-        next_harvest_note = f"{item['Cultivo']} · {item['Unidad']}"
-
-    next_15_events = pd.DataFrame()
-    overdue_events = pd.DataFrame()
-    if events is not None and not events.empty:
-        pending_events = events[~events["Estado"].astype(str).str.lower().str.contains("complet", na=False)].copy()
-        if not pending_events.empty:
-            pending_events["_date"] = pending_events.apply(event_effective_date, axis=1)
-            dated = pending_events[pending_events["_date"].notna()].copy()
-            if not dated.empty:
-                dated["_date"] = pd.to_datetime(dated["_date"]).dt.date
-                today = date.today()
-                next_15_events = dated[(dated["_date"] >= today) & (dated["_date"] <= today + timedelta(days=15))]
-                overdue_events = dated[dated["_date"] < today]
-
-    active_trees = 0 if trees is None or trees.empty else len(trees)
-    cards = [
-        (t("crops"), total_plants, t("different_species").format(n=species_count)),
-        (t("trees"), active_trees, t("registered")),
-        (t("beds"), filtered_units["Unidad"].nunique(), t("by_filters")),
-        (t("harvest"), next_harvest_value, next_harvest_note),
-        (t("available_harvests_short"), len(available_harvest), t("min_in_past")),
-        (t("spaces"), len(explicit_available), t("available_plural")),
-        (t("errors"), errors, t("missing_data")),
-        (t("events_15d"), len(next_15_events), t("pending_next")),
-    ]
-    dashboard_metric_cards(cards)
-
-    c1, c2 = st.columns([1,1])
-    with c1:
-        lines = []
-        if len(overdue_events) > 0:
-            lines.append(f'<div class="dash-line"><span class="dash-pill pill-red">{t("overdue")}</span> {len(overdue_events)} {t("events_not_done")}</div>')
-        if len(next_15_events) > 0:
-            sample = next_15_events.sort_values("_date").head(3)
-            for _, r in sample.iterrows():
-                lines.append(f'<div class="dash-line"><span class="dash-pill pill-yellow">{fmt_date(r["_date"])}</span> {r.get("Tipo_Evento", "Evento")} · {r.get("Target_Label", "")}</div>')
-        if not lines:
-            lines.append(f'<div class="dash-line"><span class="dash-pill pill-green">{t("no_alerts")}</span> {t("no_events_15")}</div>')
-        html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("special_events")}</div>{"".join(lines)}</div>')
-    with c2:
-        html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("quick_notes")}</div><div class="dash-line">{t("quick_notes_help")}</div></div>')
-        note = st.text_area(t("new_note"), placeholder=t("note_placeholder"), height=90, key="quick_note")
-        if note.strip():
-            st.download_button(t("download_note"), data=note.strip(), file_name=f"fincaos_nota_{date.today().isoformat()}.txt", mime="text/plain")
-
-    render_gpt_log_panel(log_gpt)
-
-
-def render_gpt_log_panel(log_gpt):
-    st.markdown(f'<div class="event-section-title">🧾 {t("last_gpt_events")}</div>', unsafe_allow_html=True)
-    st.caption(t("last_gpt_events_help"))
-    if log_gpt is None or log_gpt.empty:
-        html_block(f'<div class="dash-panel"><div class="dash-line">{t("no_gpt_log")}</div></div>')
-        return
-    view = log_gpt.sort_values("FechaHora", ascending=False).head(10).copy()
-    view["Fecha"] = view["FechaHora"].dt.strftime("%d/%m/%Y %H:%M").fillna("")
-    view = view[["Fecha", "Accion", "Estado", "ComandoOriginal"]]
-    st.dataframe(view, use_container_width=True, hide_index=True)
-
-
-def render_weather_view():
-    st.markdown(f'<div class="section-title">☁️ {t("climate")}</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 1, 1.6])
-    with c1:
-        st.radio(t("period"), [t("weekly"), t("monthly")], index=0, horizontal=True, key="weather_period")
-    with c2:
-        finca = st.radio(t("farm"), ["Frailes", "Moravia"], index=0, horizontal=True, key="weather_farm")
-    with c3:
-        st.selectbox(t("week"), ["12 – 18 mayo 2025", "19 – 25 mayo 2025", "26 mayo – 1 junio 2025"], key="weather_week")
-
-    html_block(f'<div class="weather-reference"><b>{t("rain_reference")}:</b> {t("rain_reference_text")}</div>')
-
-    mock = {
-        "Moravia": {"rain": 28.4, "sun": 32.1, "days": 3, "temp": 24.3},
-        "Frailes": {"rain": 68.7, "sun": 18.6, "days": 5, "temp": 22.1},
-    }
-    cols = st.columns(4)
-    metrics = [
-        ("🌧️", t("rain_7_days"), "rain", "mm"),
-        ("☀️", t("sun_hours"), "sun", "h"),
-        ("☔", t("rainy_days"), "days", ""),
-        ("🌡️", t("avg_temp"), "temp", "°C"),
-    ]
-    for col, (icon, label, key, suffix) in zip(cols, metrics):
-        with col:
-            value = mock[finca][key]
-            html_block(f'<div class="weather-card"><div class="weather-title">{icon} {label}</div><div class="weather-value">{value}{suffix}</div><div class="weather-note">{finca}</div></div>')
-
-    days_by_farm = {
-        "Frailes": [("LUN 12", "🌧️", "14.8 mm", "1.7 h", "lluvia alta"), ("MAR 13", "🌧️", "8.4 mm", "2.1 h", "lluvia media"), ("MIÉ 14", "🌧️", "18.2 mm", "1.2 h", "lluvia alta"), ("JUE 15", "🌧️", "11.6 mm", "1.6 h", "lluvia alta"), ("VIE 16", "🌦️", "7.5 mm", "2.8 h", "lluvia media"), ("SÁB 17", "🌤️", "2.2 mm", "4.5 h", "parcial"), ("DOM 18", "🌧️", "6.0 mm", "4.7 h", "lluvia media")],
-        "Moravia": [("LUN 12", "🌧️", "6.8 mm", "2.1 h", "lluvia media"), ("MAR 13", "🌤️", "1.2 mm", "6.3 h", "nublado parcial"), ("MIÉ 14", "🌤️", "0.0 mm", "5.8 h", "soleado"), ("JUE 15", "🌧️", "12.6 mm", "1.4 h", "lluvia alta"), ("VIE 16", "🌧️", "6.3 mm", "2.0 h", "lluvia media"), ("SÁB 17", "☀️", "0.0 mm", "8.2 h", "soleado"), ("DOM 18", "🌤️", "1.5 mm", "6.3 h", "nublado parcial")],
-    }
-
-    st.markdown(f"### {t('current_week')} · {finca}")
-    dcols = st.columns(7)
-    for c, d in zip(dcols, days_by_farm[finca]):
-        with c:
-            html_block(f'<div class="weather-day"><b>{d[0]}</b><div class="weather-icon">{d[1]}</div><div>{d[2]}</div><div>{d[3]}</div><small>{d[4]}</small></div>')
-
-    left, right = st.columns([1.35, 1])
-    with left:
-        st.markdown(f"### {t('monthly_summary')}")
-        chart_data = pd.DataFrame({"Moravia": [24, 13, 37, 18, 28], "Frailes": [54, 31, 82, 45, 69]}, index=["14-20 abr", "21-27 abr", "28 abr-4 may", "5-11 may", "12-18 may"])
-        st.bar_chart(chart_data[[finca]])
-    with right:
-        st.markdown(f"### {t('weekly_recommendation')}")
-        if finca == "Frailes":
-            recos = ["Postergar abono foliar por lluvia acumulada alta.", "Vigilar hongos por varios días húmedos.", "Revisar drenaje y evitar riego adicional."]
-        else:
-            recos = ["Ventana favorable para control fitosanitario si hay 24h sin lluvia.", "Revisar riego solo si baja la humedad del sustrato.", "Buen periodo para observación sanitaria."]
-        for r in recos:
-            html_block(f'<div class="reco-card">{r}</div>')
-    html_block(f'<div class="dash-panel"><div class="dash-line"><b>{t("sample_data")}.</b> {t("future_integration")}.</div></div>')
-
-
-def render_progress_view():
-    st.markdown(f'<div class="section-title">📷 {t("progress")}</div>', unsafe_allow_html=True)
-    html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("photo_progress")}</div><div class="dash-line">{t("photo_progress_help")}</div><div class="dash-line"><span class="dash-pill pill-blue">Tip</span>{t("camera_note")}</div></div>')
-
     photo_map = {
-        "Cama 1": ("vista_este.jpeg", "Julio 2025"),
-        "Cama 2": (None, "Pendiente"),
-        "Cama 3": ("cama_6_y_3.jpeg", "Julio 2025"),
-        "Cama 4": (None, "Pendiente"),
-        "Cama 5": (None, "Pendiente"),
-        "Cama 6": ("cama_6_y_3.jpeg", "Julio 2025"),
-        "Cama 7": ("vista_sur.jpeg", "Julio 2025"),
+        "Cama 1": (None, "Pendiente"),
+        "Cama 2": ("cama_2_junio.jpeg", "Junio 2026"),
+        "Cama 3": ("cama_3_junio.jpeg", "Junio 2026"),
+        "Cama 4": ("cama_4_junio.jpeg", "Junio 2026"),
+        "Cama 5": ("cama_5_junio.jpeg", "Junio 2026"),
+        "Cama 6": ("cama_6_junio.jpeg", "Junio 2026"),
+        "Cama 7": ("cama_7_junio.jpeg", "Junio 2026"),
     }
     cards = ['<div class="progress-grid">']
     for cama, (img, periodo) in photo_map.items():
@@ -1437,21 +983,8 @@ def bed_panel(unit_row, crops_df, events=None):
             import base64, mimetypes
             mime = mimetypes.guess_type(photo_path)[0] or "image/jpeg"
             uri = "data:" + mime + ";base64," + base64.b64encode(Path(photo_path).read_bytes()).decode("utf-8")
-            safe_id = re.sub(r'[^a-zA-Z0-9_-]+', '_', str(unidad))
             st.markdown(
-                f'''
-                <div class="bed-thumb-wrap">
-                    <a class="bed-thumb-link" href="#foto_{safe_id}">
-                        <img class="bed-thumb" src="{uri}" title="Click para ampliar">
-                    </a>
-                    <div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}<br><span style="font-size:11px;opacity:.8;">Click para ampliar</span></div>
-                </div>
-                <div id="foto_{safe_id}" class="img-modal">
-                    <a href="#" class="close">×</a>
-                    <img src="{uri}">
-                    <div class="img-modal-caption">{unidad} · {photo_caption}</div>
-                </div>
-                ''',
+                f'<div class="bed-thumb-wrap"><img class="bed-thumb" src="{uri}"><div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}</div></div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -1676,37 +1209,17 @@ def health_class(value):
 def render_tree_card(row, events=None, insumos=None):
     control_html = control_status_html(latest_control_status(events, row.get("Arbol_ID")))
     history_html = history_table_html(events, row.get("Arbol_ID"))
-    next_abono_html = next_soil_abono_html(events, insumos, row.get("Arbol_ID"), row.get("Estado_Fenologico", ""))
-    pending_html = pending_actions_html(events, row.get("Arbol_ID"))
-    notes_html = tree_notes_html(row)
     st.markdown(f"""
     <div class="tree-card">
-        <div class="tree-header">
+        <div class="tree-row">
             <div class="tree-icon">{normalized_tree_icon(row)}</div>
             <div style="width:100%;">
                 <div class="tree-name">{row['Arbol']}</div>
-            </div>
-        </div>
-        <div class="tree-body">
-            <div class="tree-section general-info">
-                <div class="tree-subtitle">{t('general_info')}</div>
                 <div class="tree-line">{t("phenology")} <span class="tree-pill {phen_class(row['Estado_Fenologico'])}">{tv(row['Estado_Fenologico'])}</span></div>
                 <div class="tree-line">Trasplante <b>{row['Trasplante']}</b></div>
                 <div class="tree-line">{t("health_status")} <span class="tree-pill {health_class(row['Estado_Sanitario'])}">● {tv(row['Estado_Sanitario'])}</span></div>
                 {control_html}
-            </div>
-            <div class="tree-section registered-events">
-                <div class="tree-subtitle">{t('registered_events')}</div>
-                <div class="tree-subnote">{t('tree_history_help')}</div>
                 {history_html}
-            </div>
-            <div class="tree-section future-actions">
-                <div class="tree-subtitle">{t('future_actions_notes')}</div>
-                <div class="tree-subnote">{t('future_section_help')}</div>
-                {next_abono_html}
-                <div class="pending-note" style="margin-top:8px;"><b>{t('pending_actions')}</b></div>
-                {pending_html}
-                {notes_html}
             </div>
         </div>
     </div>
@@ -1732,6 +1245,72 @@ def render_arboles_view(trees, events, insumos):
                     render_tree_card(row, events, insumos)
 
 
+
+def fmt_number(value):
+    try:
+        if pd.isna(value):
+            return ""
+        value = float(value)
+        return str(int(value)) if value.is_integer() else f"{value:.2f}".rstrip("0").rstrip(".")
+    except Exception:
+        return ""
+
+
+def harvest_quantity_html(row):
+    cantidad = row.get("Cantidad")
+    unidad = str(row.get("Unidad_Medida", "")).strip()
+    normal = row.get("Cantidad_Normalizada")
+    unidad_norm = str(row.get("Unidad_Normalizada", "")).strip()
+    destino = str(row.get("Destino", "")).strip()
+    notas_cosecha = str(row.get("Notas_Cosecha", "")).strip()
+
+    pieces = []
+    c = fmt_number(cantidad)
+    if c:
+        pieces.append(f'<b>Cantidad:</b> <span class="harvest-qty">{c} {unidad}</span>')
+    n = fmt_number(normal)
+    if n and unidad_norm:
+        pieces.append(f'<b>Normalizado:</b> {n} {unidad_norm}')
+    if destino:
+        pieces.append(f'<b>Destino:</b> {destino}')
+    if notas_cosecha:
+        pieces.append(notas_cosecha)
+    if not pieces:
+        return ""
+    return '<div class="ag-event-meta">' + '<br>'.join(pieces) + '</div>'
+
+
+def render_cosechas_report(events):
+    if events is None or events.empty or "Tipo_Evento" not in events.columns:
+        return
+    cosechas = events[events["Tipo_Evento"].astype(str).str.lower().str.contains("cosecha", na=False)].copy()
+    if cosechas.empty:
+        return
+    cosechas["_date"] = cosechas.apply(event_effective_date, axis=1)
+    cosechas["Mes"] = pd.to_datetime(cosechas["_date"], errors="coerce").dt.strftime("%Y-%m").fillna("Sin fecha")
+    cosechas["Cultivo_Base"] = cosechas["Cultivo"].replace("", pd.NA).fillna(cosechas["Target_Label"].replace("", pd.NA)).fillna("Sin cultivo")
+
+    with st.expander("📦 Resumen de cosechas medibles", expanded=False):
+        valid = cosechas[cosechas["Cantidad_Normalizada"].notna() & (cosechas["Unidad_Normalizada"].astype(str).str.strip() != "")].copy()
+        if valid.empty:
+            st.info("Hay eventos de cosecha, pero todavía no tienen cantidad normalizada para reportes.")
+        else:
+            summary = (
+                valid.groupby(["Mes", "Finca", "Cultivo_Base", "Unidad_Normalizada"], dropna=False)["Cantidad_Normalizada"]
+                .sum()
+                .reset_index()
+                .sort_values(["Mes", "Finca", "Cultivo_Base"])
+            )
+            chips = []
+            for _, r in summary.tail(12).iterrows():
+                chips.append(
+                    f'<span class="harvest-chip">{r["Mes"]} · {r["Cultivo_Base"]}: '
+                    f'{fmt_number(r["Cantidad_Normalizada"])} {r["Unidad_Normalizada"]}</span>'
+                )
+            html_block('<div class="harvest-summary"><div class="harvest-summary-title">Cosechas listas para reportes</div>' + ''.join(chips) + '</div>')
+            st.dataframe(summary, use_container_width=True, hide_index=True)
+
+
 def render_eventos_view(events, insumos):
     c1, c2, c3 = st.columns([1.1, 1.1, 1.1])
     with c1:
@@ -1751,6 +1330,8 @@ def render_eventos_view(events, insumos):
         filtered_events = filtered_events[filtered_events["Finca"] == finca_sel]
     if estado_sel != t("all_m"):
         filtered_events = filtered_events[filtered_events["Estado"] == estado_sel]
+
+    render_cosechas_report(filtered_events)
 
     if filtered_events.empty:
         st.markdown(f'<div class="calendar-toolbar"><div class="calendar-note">{t("no_events_filters")}</div></div>', unsafe_allow_html=True)
@@ -1781,6 +1362,7 @@ def render_eventos_view(events, insumos):
                             </div>
                             <div class="ag-event-meta"><b>{t("input")}:</b> {insumo}</div>
                             <div class="ag-event-meta"><b>{t("date")}:</b> {fecha_txt}</div>
+                            {harvest_quantity_html(row)}
                             <div class="ag-event-meta">{row.get("Notas", "")}</div>
                         </div>
                         """
@@ -1810,87 +1392,6 @@ def render_eventos_view(events, insumos):
                             """
                             st.markdown(html, unsafe_allow_html=True)
 
-
-
-
-
-def _txt(value, fallback=""):
-    if value is None or pd.isna(value):
-        return fallback
-    text = str(value).strip()
-    if text.lower() in ["", "nan", "none"]:
-        return fallback
-    return text
-
-
-def render_dosis_view(insumos):
-    st.markdown(f'<div class="section-title">🧪 {t("field_dose_reference")}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="dose-warning">{t("reference_only")} Datos leídos desde la pestaña Insumos.</div>', unsafe_allow_html=True)
-
-    if insumos is None or insumos.empty:
-        st.write(t("no_inputs"))
-        return
-
-    df_ins = insumos.copy()
-    for col in ["Dosis_Por_Litro", "Unidad_Dosis", "Dosis_5L", "Dosis_10L", "Tipo_Dosis", "Fuente_Dosis", "Notas_Dosis", "Cantidad_Guia", "Momento_Aplicacion", "Frecuencia_Dias"]:
-        if col not in df_ins.columns:
-            df_ins[col] = ""
-
-    tipo = df_ins.get("Tipo", "").astype(str).str.lower()
-    dosis = df_ins.get("Dosis_Por_Litro", "").astype(str).str.lower()
-    liquid_mask = (
-        tipo.str.contains("control|foliar|coadyuv", na=False)
-        & ~dosis.str.contains("no aplica", na=False)
-        & dosis.str.strip().ne("")
-    )
-    liquid_rows = df_ins[liquid_mask].copy()
-
-    st.markdown(f'<div class="dose-section-title">{t("liquid_foliar_controls")}</div>', unsafe_allow_html=True)
-    if liquid_rows.empty:
-        st.markdown('<div class="dose-warning">No hay dosis por litro cargadas en Insumos.</div>', unsafe_allow_html=True)
-    else:
-        cards = ['<div class="dose-grid">']
-        for _, r in liquid_rows.iterrows():
-            dose_l = _txt(r.get("Dosis_Por_Litro"), t("according_criteria"))
-            dose_5 = _txt(r.get("Dosis_5L"), t("according_criteria"))
-            dose_10 = _txt(r.get("Dosis_10L"), t("according_criteria"))
-            source = _txt(r.get("Fuente_Dosis"), "")
-            note = _txt(r.get("Notas_Dosis"), "")
-            cards.append(f'''
-            <div class="dose-card">
-                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
-                <span class="dose-chip">{_txt(r.get("Tipo"))}</span>
-                <div class="dose-line"><b>{t("dose_per_liter")}:</b> {dose_l}</div>
-                <div class="dose-line"><b>Para 5 L:</b> {dose_5}</div>
-                <div class="dose-line"><b>Para 10 L:</b> {dose_10}</div>
-                <div class="dose-note"><b>{t("source_note")}:</b> {source}</div>
-                <div class="dose-note">{note}</div>
-            </div>
-            ''')
-        cards.append('</div>')
-        html_block(''.join(cards))
-
-    st.markdown(f'<div class="dose-section-title">{t("yaramila_tree_reference")}</div>', unsafe_allow_html=True)
-    ymask = df_ins.get("Nombre", "").astype(str).str.lower().str.contains("yaramila", na=False)
-    y_rows = df_ins[ymask].copy()
-    if y_rows.empty:
-        st.markdown('<div class="dose-warning">No hay registro de YaraMila en Insumos.</div>', unsafe_allow_html=True)
-    else:
-        cards = ['<div class="dose-grid">']
-        for _, r in y_rows.iterrows():
-            cards.append(f'''
-            <div class="dose-card">
-                <div class="dose-name">{_txt(r.get("Nombre"))}</div>
-                <span class="dose-chip">{_txt(r.get("Tipo_Dosis"), "Por árbol / corona")}</span>
-                <div class="dose-line"><b>{t("guide_qty")}:</b> {_txt(r.get("Cantidad_Guia"), t("according_criteria"))}</div>
-                <div class="dose-line"><b>{t("frequency")}:</b> {_txt(r.get("Frecuencia_Dias"), t("no_rule"))} días</div>
-                <div class="dose-line"><b>{t("timing")}:</b> {_txt(r.get("Momento_Aplicacion"), t("according_state"))}</div>
-                <div class="dose-note"><b>{t("source_note")}:</b> {_txt(r.get("Fuente_Dosis"), "Referencia interna FincaOS")}</div>
-                <div class="dose-note">{_txt(r.get("Notas_Dosis"), "")}</div>
-            </div>
-            ''')
-        cards.append('</div>')
-        html_block(''.join(cards))
 
 
 def render_account_view():
@@ -1931,8 +1432,8 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 27</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-12</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 23.2</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-11</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;">
@@ -1980,7 +1481,7 @@ if estado_filter:
     active_units = filtered["Unidad"].unique().tolist()
     filtered_units = filtered_units[(filtered_units["Unidad"].isin(active_units)) | ((filtered_units["Estado_Unidad"] == "No activa") & ("No activa" in estado_filter))]
 
-tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_dosis, tab_calendario, tab_clima, tab_avance, tab_cuenta = st.tabs([f"📊 {t('dashboard')}", f"🛏️ {t('beds')}", f"🌳 {t('trees')}", f"🧪 {t('events')}", f"📏 {t('doses')}", f"📅 {t('calendar')}", f"☁️ {t('climate')}", f"📷 {t('progress')}", f"👤 {t('account')}"] )
+tab_dashboard, tab_camas, tab_arboles, tab_eventos, tab_calendario, tab_clima, tab_avance, tab_cuenta = st.tabs([f"📊 {t('dashboard')}", f"🛏️ {t('beds')}", f"🌳 {t('trees')}", f"🧪 {t('events')}", f"📅 {t('calendar')}", f"☁️ {t('climate')}", f"📷 {t('progress')}", f"👤 {t('account')}"] )
 
 with tab_dashboard:
     render_dashboard_view(filtered, filtered_units, eventos, trees, log_gpt)
@@ -2005,9 +1506,6 @@ with tab_arboles:
 
 with tab_eventos:
     render_eventos_view(eventos, insumos)
-
-with tab_dosis:
-    render_dosis_view(insumos)
 
 with tab_calendario:
     render_calendar_view(df)
