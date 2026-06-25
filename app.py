@@ -1,6 +1,8 @@
 from pathlib import Path
 from datetime import date, datetime, timedelta
 import calendar
+import html
+import re
 from textwrap import dedent
 
 import pandas as pd
@@ -32,6 +34,7 @@ CROP_META = {
     "Zucchini": {"icon": "🥒", "class": "zucchini"},
     "Zuchinni": {"icon": "🥒", "class": "zucchini"},
     "Zanahoria": {"icon": "🥕", "class": "carrot"},
+    "Vainica": {"icon": "🌱", "class": "basil"},
     "Cebollino": {"icon": "🌱", "class": "chives"},
     "Perejil italiano": {"icon": "☘️", "class": "parsley"},
     "Perejil normal": {"icon": "🌿", "class": "parsley-normal"},
@@ -633,6 +636,10 @@ st.markdown(
 .ag-event-title {font-size:16px; font-weight:950; color:#0f172a;}
 .ag-event-meta {font-size:12px; color:#475569; font-weight:750; margin-top:3px;}
 .ag-event-pill {display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:950;}
+.harvest-qty {font-weight:950; color:#14532d;}
+.harvest-summary {background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:14px;margin:10px 0 16px;}
+.harvest-summary-title {font-size:16px;font-weight:900;color:#0f3d25;margin-bottom:8px;}
+.harvest-chip {display:inline-block;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:999px;padding:6px 10px;margin:4px;font-size:12px;font-weight:800;}
 .event-completado {background:#dcfce7; color:#166534;}
 .event-pendiente {background:#fef3c7; color:#92400e;}
 .event-no-empezado {background:#e0f2fe; color:#075985;}
@@ -675,11 +682,6 @@ st.markdown(
 .progress-title {font-size:14px; font-weight:950; color:#0f3d25; margin-top:8px;}
 .progress-meta {font-size:12px; color:#64748b; font-weight:750;}
 .weather-reference {background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px; color:#7c2d12; font-weight:800; margin:8px 0 12px 0;}
-
-.harvest-summary {background:#f8fafc;border:1px solid #dbe7de;border-radius:16px;padding:12px 14px;margin:8px 0 14px 0;color:#0f172a;}
-.harvest-summary-title {font-size:16px;font-weight:950;color:#0f3d25;margin-bottom:8px;}
-.harvest-chip {display:inline-block;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:999px;padding:5px 10px;margin:3px;font-size:12px;font-weight:900;}
-.harvest-qty {font-weight:950;color:#0f3d25;}
 
 
 </style>
@@ -772,9 +774,9 @@ def load_data():
         "EventosAgricolas",
         ["ID_Evento","Tipo_Evento","ID_Insumo","Nombre_Insumo","Target_Tipo","Target_ID",
          "Target_Label","Finca","Unidad","Cultivo","Arbol","Fecha_Programada",
-         "Fecha_Realizada","Estado","Notas","Cantidad","Unidad_Medida",
-         "Cantidad_Normalizada","Unidad_Normalizada","Tipo_Cosecha","Destino",
-         "Afecta_Inventario","Notas_Cosecha"]
+         "Fecha_Realizada","Estado","Notas",
+         "Cantidad","Unidad_Medida","Cantidad_Normalizada","Unidad_Normalizada",
+         "Tipo_Cosecha","Destino","Afecta_Inventario","Notas_Cosecha"]
     )
 
     insumos = _read_sheet(
@@ -789,55 +791,6 @@ def load_data():
 
     return clean_view(df), clean_units(unidades, fincas), clean_trees(arboles), clean_events(eventos), insumos, clean_gpt_log(log_gpt)
 
-
-
-def clean_view(df):
-    out = pd.DataFrame()
-    n = len(df)
-
-    def col_series(candidates, default_value=""):
-        source = find_col(df, candidates, None)
-        if source and source in df.columns:
-            return df[source]
-        return pd.Series([default_value] * n)
-
-    out["Siembra_ID"] = col_series(["Siembra_ID"], None) if "Siembra_ID" in df.columns else [f"ROW_{i}" for i in range(n)]
-    out["Finca"] = col_series(["Finca", "Finca_Nombre", "Nombre_Finca"], "").fillna("").astype(str)
-    out["Unidad"] = col_series(["Unidad", "Unidad_Nombre", "Nombre_Unidad"], "").fillna("").astype(str)
-    out["Cultivo"] = col_series(["Cultivo", "Cultivo_Nombre", "Nombre_Cultivo"], "").fillna("").astype(str)
-    out["Cantidad"] = pd.to_numeric(col_series(["Cantidad"], 0), errors="coerce").fillna(0).astype(int)
-    out["Estado_Actual"] = col_series(["Estado_Actual", "Estado"], "Sin estado").fillna("Sin estado").astype(str)
-    out["Estado_Unidad"] = col_series(["Estado_Unidad"], "Activa").fillna("Activa").astype(str)
-    out["Alerta_Datos"] = col_series(["Alerta_Datos", "Estado_Ficha"], "").fillna("").astype(str)
-
-    for col in ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]:
-        source = find_col(df, [col], None)
-        out[col] = pd.to_datetime(df[source], errors="coerce") if source and source in df.columns else pd.NaT
-
-    # Si Cosecha_Min/Max no vienen calculadas desde Google Sheets, calcularlas usando días del catálogo/vista.
-    min_col = find_col(df, ["Dias_Cosecha_Min", "Dias_Min_Cosecha", "Cosecha_Dias_Min"], None)
-    max_col = find_col(df, ["Dias_Cosecha_Max", "Dias_Max_Cosecha", "Cosecha_Dias_Max"], None)
-    base_date = out["Fecha_Base"].copy()
-    base_date = base_date.fillna(out["Fecha_Trasplante"]).fillna(out["Fecha_Siembra"])
-    out["Fecha_Base"] = out["Fecha_Base"].fillna(base_date)
-
-    if min_col and min_col in df.columns:
-        dias_min = pd.to_numeric(df[min_col], errors="coerce")
-        missing_min = out["Cosecha_Min"].isna() & base_date.notna() & dias_min.notna()
-        out.loc[missing_min, "Cosecha_Min"] = base_date[missing_min] + pd.to_timedelta(dias_min[missing_min], unit="D")
-    if max_col and max_col in df.columns:
-        dias_max = pd.to_numeric(df[max_col], errors="coerce")
-        missing_max = out["Cosecha_Max"].isna() & base_date.notna() & dias_max.notna()
-        out.loc[missing_max, "Cosecha_Max"] = base_date[missing_max] + pd.to_timedelta(dias_max[missing_max], unit="D")
-
-    mask_disp = out.apply(is_available_placeholder, axis=1) if len(out) else pd.Series([], dtype=bool)
-    if len(out):
-        out.loc[mask_disp, ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]] = pd.NaT
-
-    out["Cosecha_Disponible"] = out.apply(is_harvest_ready, axis=1) if len(out) else False
-    out["Mes_Cosecha"] = out["Cosecha_Min"].dt.strftime("%Y-%m").fillna("Sin fecha")
-    out["Visual_Status"] = out.apply(visual_status, axis=1) if len(out) else "Sin datos"
-    return out
 
 def clean_units(unidades, fincas):
     out = unidades.copy()
@@ -870,23 +823,15 @@ def clean_events(eventos):
             out[col] = pd.to_datetime(out[col], errors="coerce")
         else:
             out[col] = pd.NaT
-
-    text_cols = [
-        "Tipo_Evento", "Nombre_Insumo", "Target_Tipo", "Target_ID", "Target_Label",
-        "Finca", "Unidad", "Cultivo", "Arbol", "Estado", "Notas",
-        "Unidad_Medida", "Unidad_Normalizada", "Tipo_Cosecha", "Destino",
-        "Afecta_Inventario", "Notas_Cosecha"
-    ]
+    text_cols = ["Tipo_Evento", "Nombre_Insumo", "Target_Tipo", "Target_ID", "Target_Label", "Finca", "Unidad", "Cultivo", "Arbol", "Estado", "Notas", "Unidad_Medida", "Unidad_Normalizada", "Tipo_Cosecha", "Destino", "Afecta_Inventario", "Notas_Cosecha"]
     for col in text_cols:
         if col not in out.columns:
             out[col] = ""
         out[col] = out[col].fillna("").astype(str)
-
     for col in ["Cantidad", "Cantidad_Normalizada"]:
         if col not in out.columns:
             out[col] = pd.NA
         out[col] = pd.to_numeric(out[col], errors="coerce")
-
     return out
 
 
@@ -925,8 +870,8 @@ def img_data_uri(name):
 
 
 def bed_photo_for(unit_name):
-    """Devuelve la foto local de referencia para una cama.
-    Funciona con nombres tipo "Cama 2" o "Cama Frailes 2".
+    """Foto local de referencia para cada cama.
+    Junio 2026 reemplaza las fotos de muestra anteriores.
     """
     import re
     u = str(unit_name or "").lower()
@@ -943,66 +888,6 @@ def bed_photo_for(unit_name):
     bed_num = match.group(1) if match else None
     img, caption = photo_map.get(bed_num, (None, "Referencia visual pendiente"))
     return asset_path(img) if img else None, caption
-
-
-
-
-# --- Helper functions restored in V24.2 ---
-def fmt_date(value):
-    if pd.isna(value):
-        return t("date_none")
-    return pd.to_datetime(value).strftime("%d %b %Y")
-
-
-def base_date_label(row):
-    if pd.notna(row.get("Fecha_Trasplante")):
-        return f"{t('transplant')}: {fmt_date(row.get('Fecha_Trasplante'))}"
-    if pd.notna(row.get("Fecha_Siembra")):
-        return f"{t('planting')}: {fmt_date(row.get('Fecha_Siembra'))}"
-    return t("date_base_none")
-
-
-def days_html(value, prefix):
-    if pd.isna(value):
-        return f'<div class="info-line">{prefix}: {t("date_none")}</div>'
-    days = (pd.to_datetime(value).date() - date.today()).days
-    if days > 0:
-        return f'<div class="info-line">{prefix}: {t("in_days").format(days=days)}</div>'
-    if days == 0:
-        return f'<div class="info-line past-harvest"><b>{prefix}: {t("harvest_today")}</b></div>'
-    return f'<div class="info-line past-harvest"><b>{prefix}: {t("days_ago").format(days=abs(days))}</b></div>'
-
-
-def display_state(row):
-    if row.get("Visual_Status") == "Disponible":
-        return "Disponible"
-    return row.get("Estado_Actual", "")
-
-
-def html_block(markup):
-    st.markdown(dedent(str(markup)).strip(), unsafe_allow_html=True)
-
-
-def metric_card(label, value, note=""):
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-note">{note}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def dashboard_metric_cards(cards):
-    parts = ['<div class="dashboard-grid">']
-    for label, value, note in cards:
-        parts.append(f'<div class="dash-card"><div class="dash-label">{label}</div><div class="dash-value">{value}</div><div class="dash-note">{note}</div></div>')
-    parts.append('</div>')
-    html_block(''.join(parts))
-
 
 def normalized_tree_icon(row):
     name = str(row.get("Arbol", "")).lower()
@@ -1034,9 +919,7 @@ def event_status_class(status, effective_date=None):
 def latest_control_status(events, target_id):
     if events is None or events.empty or not target_id:
         return None
-    if "Target_ID" not in events.columns or "Tipo_Evento" not in events.columns:
-        return None
-    subset = events[(events["Target_ID"].astype(str) == str(target_id)) & (events["Tipo_Evento"].astype(str).str.lower() == "control fitosanitario")].copy()
+    subset = events[(events["Target_ID"].astype(str) == str(target_id)) & (events["Tipo_Evento"].str.lower() == "control fitosanitario")].copy()
     if subset.empty:
         return None
     subset["_date"] = subset.apply(event_effective_date, axis=1)
@@ -1054,10 +937,9 @@ def control_status_html(control):
     return f'<div class="control-line">{tv("Control fitosanitario")} <span class="control-pill {cls}">{tv(control.get("estado", ""))}</span> · {insumo} · {fecha}</div>'
 
 
+
 def completed_events_for_target(events, target_id, year=None):
     if events is None or events.empty or not target_id:
-        return pd.DataFrame()
-    if "Target_ID" not in events.columns:
         return pd.DataFrame()
     subset = events[events["Target_ID"].astype(str) == str(target_id)].copy()
     if subset.empty:
@@ -1065,7 +947,7 @@ def completed_events_for_target(events, target_id, year=None):
     subset["_date"] = subset.apply(event_effective_date, axis=1)
     subset = subset[subset["_date"].notna()]
     subset = subset[subset["Estado"].astype(str).str.lower().str.contains("complet", na=False)]
-    if year is not None and not subset.empty:
+    if year is not None:
         subset = subset[pd.to_datetime(subset["_date"]).dt.year == year]
     return subset
 
@@ -1079,7 +961,6 @@ def history_summary_html(events, target_id):
     counts = subset.groupby("_key").size().sort_values(ascending=False)
     pills = "".join([f'<span class="history-pill">{k} x{v}</span>' for k, v in counts.items()])
     return f'<div class="history-line">{t("history_year")}: {pills}</div>'
-
 
 def history_table_html(events, target_id, limit=5):
     subset = completed_events_for_target(events, target_id)
@@ -1136,12 +1017,91 @@ def next_soil_abono_html(events, insumos, target_id, estado_fenologico=""):
     timing = t("overdue").lower() if days < 0 else t("harvest_today") if days == 0 else t("in_days").format(days=days)
     return f'<div class="{cls}">{t("next_abono_suggested")}: {insumo} · {fmt_date(next_date)} ({timing})<br>{t("guide_quantity")}: {cantidad}<br>{t("timing")}: {momento}</div>'
 
+def clean_view(df):
+    out = pd.DataFrame()
+    out["Siembra_ID"] = df[find_col(df, ["Siembra_ID"], None)] if "Siembra_ID" in df.columns else [f"ROW_{i}" for i in range(len(df))]
+    out["Finca"] = df[find_col(df, ["Finca", "Finca_Nombre", "Nombre_Finca"], None)].astype(str)
+    out["Unidad"] = df[find_col(df, ["Unidad", "Unidad_Nombre", "Nombre_Unidad"], None)].astype(str)
+    out["Cultivo"] = df[find_col(df, ["Cultivo", "Cultivo_Nombre", "Nombre_Cultivo"], None)].astype(str)
+    out["Cantidad"] = pd.to_numeric(df[find_col(df, ["Cantidad"], None)], errors="coerce").fillna(0).astype(int)
+    out["Estado_Actual"] = df[find_col(df, ["Estado_Actual", "Estado"], None)].fillna("Sin estado").astype(str)
+    out["Estado_Unidad"] = df[find_col(df, ["Estado_Unidad"], None)].fillna("Activa").astype(str) if "Estado_Unidad" in df.columns else "Activa"
+    out["Alerta_Datos"] = df[find_col(df, ["Alerta_Datos", "Estado_Ficha"], None)].fillna("").astype(str) if ("Alerta_Datos" in df.columns or "Estado_Ficha" in df.columns) else ""
+
+    for col in ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]:
+        source = find_col(df, [col], None)
+        out[col] = pd.to_datetime(df[source], errors="coerce") if source else pd.NaT
+
+    mask_disp = out.apply(is_available_placeholder, axis=1)
+    out.loc[mask_disp, ["Fecha_Siembra", "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max"]] = pd.NaT
+
+    out["Cosecha_Disponible"] = out.apply(is_harvest_ready, axis=1)
+    out["Mes_Cosecha"] = out["Cosecha_Min"].dt.strftime("%Y-%m").fillna("Sin fecha")
+    out["Visual_Status"] = out.apply(visual_status, axis=1)
+    return out
+
+
+def fmt_date(value):
+    if pd.isna(value):
+        return t("date_none")
+    return pd.to_datetime(value).strftime("%d %b %Y")
+
+
+def base_date_label(row):
+    if pd.notna(row["Fecha_Trasplante"]):
+        return f"{t('transplant')}: {fmt_date(row['Fecha_Trasplante'])}"
+    if pd.notna(row["Fecha_Siembra"]):
+        return f"{t('planting')}: {fmt_date(row['Fecha_Siembra'])}"
+    return t("date_base_none")
+
+
+def days_html(value, prefix):
+    if pd.isna(value):
+        return f'<div class="info-line">{prefix}: {t("date_none")}</div>'
+    days = (pd.to_datetime(value).date() - date.today()).days
+    if days > 0:
+        return f'<div class="info-line">{prefix}: {t("in_days").format(days=days)}</div>'
+    if days == 0:
+        return f'<div class="info-line past-harvest"><b>{prefix}: {t("harvest_today")}</b></div>'
+    return f'<div class="info-line past-harvest"><b>{prefix}: {t("days_ago").format(days=abs(days))}</b></div>'
+
+
+def display_state(row):
+    if row.get("Visual_Status") == "Disponible":
+        return "Disponible"
+    return row["Estado_Actual"]
+
+
+def metric_card(label, value, note=""):
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            <div class="metric-note">{note}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def html_block(markup):
+    st.markdown(dedent(str(markup)).strip(), unsafe_allow_html=True)
+
+
+def dashboard_metric_cards(cards):
+    parts = ['<div class="dashboard-grid">']
+    for label, value, note in cards:
+        parts.append(f'<div class="dash-card"><div class="dash-label">{label}</div><div class="dash-value">{value}</div><div class="dash-note">{note}</div></div>')
+    parts.append('</div>')
+    html_block(''.join(parts))
+
 
 def render_dashboard_view(filtered, filtered_units, events, trees, log_gpt=None):
     active_crops = filtered[(filtered["Cultivo"] != "Disponible") & (filtered["Estado_Unidad"] != "No activa")].copy()
-    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy() if "Cosecha_Disponible" in active_crops.columns else pd.DataFrame()
+    available_harvest = active_crops[active_crops["Cosecha_Disponible"]].copy()
     explicit_available = filtered[filtered["Cultivo"] == "Disponible"].copy()
-    errors = int((filtered["Visual_Status"] == "Dato faltante").sum()) if "Visual_Status" in filtered.columns else 0
+    errors = int((filtered["Visual_Status"] == "Dato faltante").sum())
     total_plants = int(pd.to_numeric(active_crops.get("Cantidad", 0), errors="coerce").fillna(0).sum()) if not active_crops.empty else 0
     species_count = int(active_crops["Cultivo"].nunique()) if not active_crops.empty else 0
 
@@ -1154,7 +1114,7 @@ def render_dashboard_view(filtered, filtered_units, events, trees, log_gpt=None)
 
     next_15_events = pd.DataFrame()
     overdue_events = pd.DataFrame()
-    if events is not None and not events.empty and "Estado" in events.columns:
+    if events is not None and not events.empty:
         pending_events = events[~events["Estado"].astype(str).str.lower().str.contains("complet", na=False)].copy()
         if not pending_events.empty:
             pending_events["_date"] = pending_events.apply(event_effective_date, axis=1)
@@ -1169,7 +1129,7 @@ def render_dashboard_view(filtered, filtered_units, events, trees, log_gpt=None)
     cards = [
         (t("crops"), total_plants, t("different_species").format(n=species_count)),
         (t("trees"), active_trees, t("registered")),
-        (t("beds"), filtered_units["Unidad"].nunique() if "Unidad" in filtered_units.columns else 0, t("by_filters")),
+        (t("beds"), filtered_units["Unidad"].nunique(), t("by_filters")),
         (t("harvest"), next_harvest_value, next_harvest_note),
         (t("available_harvests_short"), len(available_harvest), t("min_in_past")),
         (t("spaces"), len(explicit_available), t("available_plural")),
@@ -1205,14 +1165,10 @@ def render_gpt_log_panel(log_gpt):
     if log_gpt is None or log_gpt.empty:
         html_block(f'<div class="dash-panel"><div class="dash-line">{t("no_gpt_log")}</div></div>')
         return
-    view = log_gpt.copy()
-    if "FechaHora" in view.columns:
-        view = view.sort_values("FechaHora", ascending=False).head(10).copy()
-        view["Fecha"] = view["FechaHora"].dt.strftime("%d/%m/%Y %H:%M").fillna("")
-    else:
-        view["Fecha"] = ""
-    cols = [c for c in ["Fecha", "Accion", "Estado", "ComandoOriginal"] if c in view.columns]
-    st.dataframe(view[cols].head(10), use_container_width=True, hide_index=True)
+    view = log_gpt.sort_values("FechaHora", ascending=False).head(10).copy()
+    view["Fecha"] = view["FechaHora"].dt.strftime("%d/%m/%Y %H:%M").fillna("")
+    view = view[["Fecha", "Accion", "Estado", "ComandoOriginal"]]
+    st.dataframe(view, use_container_width=True, hide_index=True)
 
 
 def render_weather_view():
@@ -1223,25 +1179,57 @@ def render_weather_view():
     with c2:
         finca = st.radio(t("farm"), ["Frailes", "Moravia"], index=0, horizontal=True, key="weather_farm")
     with c3:
-        st.selectbox(t("week"), ["Semana actual", "Próxima semana", "Mes actual"], key="weather_week")
+        st.selectbox(t("week"), ["12 – 18 mayo 2025", "19 – 25 mayo 2025", "26 mayo – 1 junio 2025"], key="weather_week")
 
     html_block(f'<div class="weather-reference"><b>{t("rain_reference")}:</b> {t("rain_reference_text")}</div>')
+
     mock = {
         "Moravia": {"rain": 28.4, "sun": 32.1, "days": 3, "temp": 24.3},
         "Frailes": {"rain": 68.7, "sun": 18.6, "days": 5, "temp": 22.1},
     }
     cols = st.columns(4)
-    metrics = [("🌧️", t("rain_7_days"), "rain", "mm"),("☀️", t("sun_hours"), "sun", "h"),("☔", t("rainy_days"), "days", ""),("🌡️", t("avg_temp"), "temp", "°C")]
+    metrics = [
+        ("🌧️", t("rain_7_days"), "rain", "mm"),
+        ("☀️", t("sun_hours"), "sun", "h"),
+        ("☔", t("rainy_days"), "days", ""),
+        ("🌡️", t("avg_temp"), "temp", "°C"),
+    ]
     for col, (icon, label, key, suffix) in zip(cols, metrics):
         with col:
             value = mock[finca][key]
             html_block(f'<div class="weather-card"><div class="weather-title">{icon} {label}</div><div class="weather-value">{value}{suffix}</div><div class="weather-note">{finca}</div></div>')
+
+    days_by_farm = {
+        "Frailes": [("LUN 12", "🌧️", "14.8 mm", "1.7 h", "lluvia alta"), ("MAR 13", "🌧️", "8.4 mm", "2.1 h", "lluvia media"), ("MIÉ 14", "🌧️", "18.2 mm", "1.2 h", "lluvia alta"), ("JUE 15", "🌧️", "11.6 mm", "1.6 h", "lluvia alta"), ("VIE 16", "🌦️", "7.5 mm", "2.8 h", "lluvia media"), ("SÁB 17", "🌤️", "2.2 mm", "4.5 h", "parcial"), ("DOM 18", "🌧️", "6.0 mm", "4.7 h", "lluvia media")],
+        "Moravia": [("LUN 12", "🌧️", "6.8 mm", "2.1 h", "lluvia media"), ("MAR 13", "🌤️", "1.2 mm", "6.3 h", "nublado parcial"), ("MIÉ 14", "🌤️", "0.0 mm", "5.8 h", "soleado"), ("JUE 15", "🌧️", "12.6 mm", "1.4 h", "lluvia alta"), ("VIE 16", "🌧️", "6.3 mm", "2.0 h", "lluvia media"), ("SÁB 17", "☀️", "0.0 mm", "8.2 h", "soleado"), ("DOM 18", "🌤️", "1.5 mm", "6.3 h", "nublado parcial")],
+    }
+
+    st.markdown(f"### {t('current_week')} · {finca}")
+    dcols = st.columns(7)
+    for c, d in zip(dcols, days_by_farm[finca]):
+        with c:
+            html_block(f'<div class="weather-day"><b>{d[0]}</b><div class="weather-icon">{d[1]}</div><div>{d[2]}</div><div>{d[3]}</div><small>{d[4]}</small></div>')
+
+    left, right = st.columns([1.35, 1])
+    with left:
+        st.markdown(f"### {t('monthly_summary')}")
+        chart_data = pd.DataFrame({"Moravia": [24, 13, 37, 18, 28], "Frailes": [54, 31, 82, 45, 69]}, index=["14-20 abr", "21-27 abr", "28 abr-4 may", "5-11 may", "12-18 may"])
+        st.bar_chart(chart_data[[finca]])
+    with right:
+        st.markdown(f"### {t('weekly_recommendation')}")
+        if finca == "Frailes":
+            recos = ["Postergar abono foliar por lluvia acumulada alta.", "Vigilar hongos por varios días húmedos.", "Revisar drenaje y evitar riego adicional."]
+        else:
+            recos = ["Ventana favorable para control fitosanitario si hay 24h sin lluvia.", "Revisar riego solo si baja la humedad del sustrato.", "Buen periodo para observación sanitaria."]
+        for r in recos:
+            html_block(f'<div class="reco-card">{r}</div>')
     html_block(f'<div class="dash-panel"><div class="dash-line"><b>{t("sample_data")}.</b> {t("future_integration")}.</div></div>')
 
 
 def render_progress_view():
     st.markdown(f'<div class="section-title">📷 {t("progress")}</div>', unsafe_allow_html=True)
     html_block(f'<div class="dash-panel"><div class="dash-panel-title">{t("photo_progress")}</div><div class="dash-line">{t("photo_progress_help")}</div><div class="dash-line"><span class="dash-pill pill-blue">Tip</span> {t("camera_note")}</div></div>')
+
     photo_map = {
         "Cama 1": (None, "Pendiente"),
         "Cama 2": ("cama_2_junio.jpeg", "Junio 2026"),
@@ -1251,20 +1239,25 @@ def render_progress_view():
         "Cama 6": ("cama_6_junio.jpeg", "Junio 2026"),
         "Cama 7": ("cama_7_junio.jpeg", "Junio 2026"),
     }
+
+    st.markdown("### 📅 Calendario visual · Junio 2026")
     cards = ['<div class="progress-grid">']
     for cama, (img, periodo) in photo_map.items():
         uri = img_data_uri(img) if img else None
         if uri:
-            frame = f'<div class="progress-frame"><img src="{uri}"></div>'
+            frame = f'<a href="{uri}" target="_blank"><div class="progress-frame"><img src="{uri}"></div></a>'
+            meta = f'{periodo} · {t("same_frame")} · Click para ampliar'
         else:
             frame = f'<div class="progress-frame">📷<br>{t("bed_photo_pending")}</div>'
-        cards.append(f'<div class="progress-card">{frame}<div class="progress-title">{cama}</div><div class="progress-meta">{periodo} · {t("same_frame")}</div></div>')
+            meta = f'{periodo} · {t("same_frame")}'
+        cards.append(f'<div class="progress-card">{frame}<div class="progress-title">{cama}</div><div class="progress-meta">{meta}</div></div>')
     cards.append('</div>')
     html_block(''.join(cards))
 
+    st.markdown("### Carga de nuevas fotos")
     uploaded = st.file_uploader(t("upload_new_photo"), type=["png", "jpg", "jpeg"], accept_multiple_files=True)
     if uploaded:
-        st.write(f"{len(uploaded)} archivo(s) cargado(s) para vista previa. Persistencia real pendiente de integrar.")
+        st.write(f"{len(uploaded)} archivo(s) cargado(s) para vista previa. Persistencia real pendiente de integrar con Drive.")
         cols = st.columns(3)
         for col, file in zip(cols, uploaded[:3]):
             with col:
@@ -1348,9 +1341,11 @@ def bed_panel(unit_row, crops_df, events=None):
             mime = mimetypes.guess_type(photo_path)[0] or "image/jpeg"
             uri = "data:" + mime + ";base64," + base64.b64encode(Path(photo_path).read_bytes()).decode("utf-8")
             st.markdown(
-                f'<div class="bed-thumb-wrap"><img class="bed-thumb" src="{uri}"><div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}</div></div>',
+                f'<a href="{uri}" target="_blank" style="text-decoration:none;"><div class="bed-thumb-wrap"><img class="bed-thumb" src="{uri}"><div class="bed-thumb-text">📷 {t("bed_visual_reference")}<br>{photo_caption}<br><span style="font-size:11px;color:#2563eb;">Click para ampliar</span></div></div></a>',
                 unsafe_allow_html=True,
             )
+            with st.expander("🔎 Ver foto grande", expanded=False):
+                st.image(str(photo_path), caption=f"{unidad} · {photo_caption}", use_container_width=True)
         else:
             st.markdown(f'<div class="bed-thumb-wrap"><div class="bed-thumb-placeholder">📷</div><div class="bed-thumb-text">{t("bed_photo_pending")}</div></div>', unsafe_allow_html=True)
         if str(unit_row.get("Estado_Unidad", "")).lower().startswith("no activa"):
@@ -1611,22 +1606,34 @@ def render_arboles_view(trees, events, insumos):
 
 
 def fmt_number(value):
-    try:
-        if pd.isna(value):
-            return ""
-        value = float(value)
-        return str(int(value)) if value.is_integer() else f"{value:.2f}".rstrip("0").rstrip(".")
-    except Exception:
+    if value is None or pd.isna(value):
         return ""
+    try:
+        num = float(value)
+    except Exception:
+        txt = str(value).strip()
+        return "" if txt.lower() in ["", "nan", "none"] else txt
+    if abs(num - int(num)) < 0.000001:
+        return str(int(num))
+    return f"{num:.2f}".rstrip("0").rstrip(".")
+
+
+def clean_text_for_html(value):
+    txt = str(value or "").strip()
+    if not txt or txt.lower() == "nan":
+        return ""
+    # Evita que HTML accidental guardado en Sheets se muestre como código en tarjetas.
+    txt = re.sub(r"<[^>]+>", "", txt)
+    return html.escape(txt)
 
 
 def harvest_quantity_html(row):
     cantidad = row.get("Cantidad")
-    unidad = str(row.get("Unidad_Medida", "")).strip()
+    unidad = clean_text_for_html(row.get("Unidad_Medida", ""))
     normal = row.get("Cantidad_Normalizada")
-    unidad_norm = str(row.get("Unidad_Normalizada", "")).strip()
-    destino = str(row.get("Destino", "")).strip()
-    notas_cosecha = str(row.get("Notas_Cosecha", "")).strip()
+    unidad_norm = clean_text_for_html(row.get("Unidad_Normalizada", ""))
+    destino = clean_text_for_html(row.get("Destino", ""))
+    notas_cosecha = clean_text_for_html(row.get("Notas_Cosecha", ""))
 
     pieces = []
     c = fmt_number(cantidad)
@@ -1650,11 +1657,13 @@ def render_cosechas_report(events):
     cosechas = events[events["Tipo_Evento"].astype(str).str.lower().str.contains("cosecha", na=False)].copy()
     if cosechas.empty:
         return
-    cosechas["_date"] = cosechas.apply(event_effective_date, axis=1)
-    cosechas["Mes"] = pd.to_datetime(cosechas["_date"], errors="coerce").dt.strftime("%Y-%m").fillna("Sin fecha")
-    cosechas["Cultivo_Base"] = cosechas["Cultivo"].replace("", pd.NA).fillna(cosechas["Target_Label"].replace("", pd.NA)).fillna("Sin cultivo")
-
     with st.expander("📦 Resumen de cosechas medibles", expanded=False):
+        if "Cantidad_Normalizada" not in cosechas.columns or "Unidad_Normalizada" not in cosechas.columns:
+            st.info("Hay eventos de cosecha, pero la base todavía no tiene campos de cantidad normalizada.")
+            return
+        cosechas["_date"] = cosechas.apply(event_effective_date, axis=1)
+        cosechas["Mes"] = pd.to_datetime(cosechas["_date"], errors="coerce").dt.strftime("%Y-%m").fillna("Sin fecha")
+        cosechas["Cultivo_Base"] = cosechas["Cultivo"].replace("", pd.NA).fillna(cosechas["Target_Label"].replace("", pd.NA)).fillna("Sin cultivo")
         valid = cosechas[cosechas["Cantidad_Normalizada"].notna() & (cosechas["Unidad_Normalizada"].astype(str).str.strip() != "")].copy()
         if valid.empty:
             st.info("Hay eventos de cosecha, pero todavía no tienen cantidad normalizada para reportes.")
@@ -1673,7 +1682,6 @@ def render_cosechas_report(events):
                 )
             html_block('<div class="harvest-summary"><div class="harvest-summary-title">Cosechas listas para reportes</div>' + ''.join(chips) + '</div>')
             st.dataframe(summary, use_container_width=True, hide_index=True)
-
 
 def render_eventos_view(events, insumos):
     c1, c2, c3 = st.columns([1.1, 1.1, 1.1])
@@ -1726,8 +1734,7 @@ def render_eventos_view(events, insumos):
                             </div>
                             <div class="ag-event-meta"><b>{t("input")}:</b> {insumo}</div>
                             <div class="ag-event-meta"><b>{t("date")}:</b> {fecha_txt}</div>
-                            {harvest_quantity_html(row)}
-                            <div class="ag-event-meta">{row.get("Notas", "")}</div>
+                            <div class="ag-event-meta">{clean_text_for_html(row.get("Notas", ""))}</div>
                         </div>
                         """
                         st.markdown(html, unsafe_allow_html=True)
