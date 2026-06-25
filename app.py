@@ -925,34 +925,24 @@ def img_data_uri(name):
 
 
 def bed_photo_for(unit_name):
-    u = str(unit_name).lower()
+    """Devuelve la foto local de referencia para una cama.
+    Funciona con nombres tipo "Cama 2" o "Cama Frailes 2".
+    """
+    import re
+    u = str(unit_name or "").lower()
     photo_map = {
-        "Cama 1": (None, "Pendiente"),
-        "Cama 2": ("cama_2_junio.jpeg", "Junio 2026"),
-        "Cama 3": ("cama_3_junio.jpeg", "Junio 2026"),
-        "Cama 4": ("cama_4_junio.jpeg", "Junio 2026"),
-        "Cama 5": ("cama_5_junio.jpeg", "Junio 2026"),
-        "Cama 6": ("cama_6_junio.jpeg", "Junio 2026"),
-        "Cama 7": ("cama_7_junio.jpeg", "Junio 2026"),
+        "1": (None, "Pendiente"),
+        "2": ("cama_2_junio.jpeg", "Junio 2026"),
+        "3": ("cama_3_junio.jpeg", "Junio 2026"),
+        "4": ("cama_4_junio.jpeg", "Junio 2026"),
+        "5": ("cama_5_junio.jpeg", "Junio 2026"),
+        "6": ("cama_6_junio.jpeg", "Junio 2026"),
+        "7": ("cama_7_junio.jpeg", "Junio 2026"),
     }
-    cards = ['<div class="progress-grid">']
-    for cama, (img, periodo) in photo_map.items():
-        uri = img_data_uri(img) if img else None
-        if uri:
-            frame = f'<div class="progress-frame"><img src="{uri}"></div>'
-        else:
-            frame = f'<div class="progress-frame">📷<br>{t("bed_photo_pending")}</div>'
-        cards.append(f'<div class="progress-card">{frame}<div class="progress-title">{cama}</div><div class="progress-meta">{periodo} · {t("same_frame")}</div></div>')
-    cards.append('</div>')
-    html_block(''.join(cards))
-
-    uploaded = st.file_uploader(t("upload_new_photo"), type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-    if uploaded:
-        st.write(f"{len(uploaded)} archivo(s) cargado(s) para vista previa. Persistencia real pendiente de integrar.")
-        cols = st.columns(3)
-        for col, file in zip(cols, uploaded[:3]):
-            with col:
-                st.image(file, caption=file.name, use_container_width=True)
+    match = re.search(r"(\d+)", u)
+    bed_num = match.group(1) if match else None
+    img, caption = photo_map.get(bed_num, (None, "Referencia visual pendiente"))
+    return asset_path(img) if img else None, caption
 
 
 
