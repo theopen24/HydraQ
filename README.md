@@ -1,10 +1,12 @@
-# Hydra Q FincaOS V25
+# Hydra Q FincaOS V26
 
-Versión reconstruida desde V23_2 para recuperar funcionalidades completas y agregar mejoras V24 sin romper pantallas.
+Versión restaurada y ajustada con:
+- Resumen de Cosechas como pestaña independiente.
+- Eventos con tabla paginada de 50 filas y navegación Previous/Next.
+- Insumos como pestaña independiente.
+- Camas con foto solo dentro de expand/collapse.
+- Avance con meses como filas y camas como columnas.
+- Árboles con visualización en tres bloques: identificación, estado/próxima acción e historial.
+- Lógica de fecha corregida para cosecha: usa Fecha_Realizada como fecha principal.
 
-Incluye:
-- Clima completo restaurado.
-- Árboles con historial de eventos en tabla restaurado.
-- Avance con calendario visual/fotos de junio.
-- Camas con fotos reales junio 2026 y opción de ampliación.
-- Eventos de cosecha con cantidad, unidad y campos normalizados para reportes.
+Subir todos los archivos a la raíz del repo en GitHub y luego reiniciar la app en Streamlit.
