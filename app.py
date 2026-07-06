@@ -749,22 +749,68 @@ def _read_sheet(sheet_name, empty_columns=None):
         st.stop()
 
 
+def build_cultivos_view(siembras, fincas, unidades, cultivos):
+    """Construye la vista operativa desde CultivosSembrados.
+
+    Regla V27:
+    - CultivosSembrados es la fuente de verdad.
+    - VistaCultivos queda como vista auxiliar/compatibilidad, no como origen principal.
+    - Esto permite que los cambios hechos por GPT/Apps Script se reflejen en la app.
+    """
+    base = siembras.copy()
+    if base.empty:
+        return pd.DataFrame(columns=[
+            "Siembra_ID", "Finca", "Finca_ID", "Unidad", "Unidad_ID", "Estado_Unidad",
+            "Cultivo", "Cultivo_ID", "Cantidad", "Estado_Actual", "Fecha_Siembra",
+            "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max",
+            "Alerta_Datos", "Mes_Cosecha", "Evento_Agricola"
+        ])
+
+    view = base.merge(fincas, on="Finca_ID", how="left")
+    view = view.merge(unidades, on=["Unidad_ID", "Finca_ID"], how="left", suffixes=("", "_Unidad"))
+    view = view.merge(cultivos, on="Cultivo_ID", how="left")
+
+    if "Finca" not in view.columns:
+        view["Finca"] = view.get("Finca_Nombre", "")
+    if "Unidad" not in view.columns:
+        view["Unidad"] = view.get("Unidad_Nombre", "")
+    if "Cultivo" not in view.columns:
+        view["Cultivo"] = view.get("Cultivo_Nombre", "")
+    if "Estado_Unidad" not in view.columns:
+        view["Estado_Unidad"] = view.get("Estado", "Activa")
+    if "Alerta_Datos" not in view.columns:
+        view["Alerta_Datos"] = view.get("Estado_Ficha", "")
+
+    if "Mes_Cosecha" not in view.columns:
+        cm = pd.to_datetime(view.get("Cosecha_Min"), errors="coerce")
+        view["Mes_Cosecha"] = cm.dt.strftime("%Y-%m").fillna("Sin fecha")
+
+    for col in ["Evento_Agricola", "Notas"]:
+        if col not in view.columns:
+            view[col] = ""
+
+    preferred = [
+        "Siembra_ID", "Finca", "Finca_ID", "Unidad", "Unidad_ID", "Estado_Unidad",
+        "Cultivo", "Cultivo_ID", "Cantidad", "Estado_Actual", "Fecha_Siembra",
+        "Fecha_Trasplante", "Fecha_Base", "Cosecha_Min", "Cosecha_Max",
+        "Alerta_Datos", "Mes_Cosecha", "Evento_Agricola"
+    ]
+    for col in preferred:
+        if col not in view.columns:
+            view[col] = ""
+    return view[preferred]
+
+
 @st.cache_data(ttl=120, show_spinner="Cargando datos desde Google Sheets...")
 def load_data():
     fincas = _read_sheet("Fincas")
     unidades = _read_sheet("Unidades")
+    cultivos = _read_sheet("CatalogoCultivos")
+    siembras = _read_sheet("CultivosSembrados")
 
-    # Preferimos VistaCultivos si existe. Si no existe, armamos la vista desde las tablas base.
-    try:
-        df = _read_sheet("VistaCultivos", [])
-        if df.empty:
-            raise ValueError("VistaCultivos vacía")
-    except Exception:
-        cultivos = _read_sheet("CatalogoCultivos")
-        siembras = _read_sheet("CultivosSembrados")
-        df = siembras.merge(fincas, on="Finca_ID", how="left")
-        df = df.merge(unidades, on=["Unidad_ID", "Finca_ID"], how="left")
-        df = df.merge(cultivos, on="Cultivo_ID", how="left")
+    # V27: la app deja de depender de VistaCultivos como fuente principal.
+    # VistaCultivos puede existir, pero la visualización se arma desde CultivosSembrados.
+    df = build_cultivos_view(siembras, fincas, unidades, cultivos)
 
     arboles = _read_sheet("Arboles", ["Arbol_ID","Finca","Arbol","Icono","Estado_Fenologico","Trasplante","Estado_Sanitario","Evento_Agricola"])
     if arboles.empty:
@@ -1927,8 +1973,8 @@ def render_account_view():
         st.markdown(f"""
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;margin-bottom:14px;">
           <div style="font-size:18px;font-weight:800;color:#133d2e;margin-bottom:8px;">{t("version")}</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 26.0</div>
-          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-24</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("developer_version")}:</b> 27.0</div>
+          <div style="font-size:15px;color:#1f2937;"><b>{t("date_label")}:</b> 2026-06-29</div>
           <div style="font-size:15px;color:#1f2937;"><b>{t("developed_with")}:</b> ChatGPT, Google Sheets, GitHub, Apps Script and Streamlit</div>
         </div>
         <div style="background:#ffffff;border:1px solid #d7e4dc;border-radius:16px;padding:16px;">
